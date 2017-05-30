@@ -37,20 +37,9 @@ Config file
 
 ```
 {
-    "upstream": {
-        "host": "localhost",
-        "port": 6379,
-        "tls": false
-    },
-    "proxy_listens_on": {
-        "host": "*",
-        "port": 7001,
-        "tls": true
-    },
-    "admin_listens_on": {
-        "host": "127.0.0.1",
-        "port": 7010,
-        "tls": true
-    }
+  "uplink_addr": "localhost:6379",
+  "uplink_use_tls": false,
+  "listen_on": "127.0.0.1:7010",
+  "admin_on": "127.0.0.1:7011"
 }
 ```
