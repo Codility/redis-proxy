@@ -22,16 +22,21 @@ const statusHtml = `
 		<title>Redis Proxy status</title>
 	</head>
 	<body>
-		<div>Active requests: {{.ActiveRequests}}</div>
+		<div>Active requests: {{.activeRequests}}</div>
+		<div>State: {{.stateStr}}</div>
 		<form action="." method="POST">
+			<button type="submit" name="cmd" value="pause">pause</button>
+			<button type="submit" name="cmd" value="unpause">unpause</button>
 		</form>
 	</body>
 </html>
 `
 
 func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	st := proxy.getControllerState()
 	ctx := map[string]interface{}{
-		"ActiveRequests": proxy.activeRequests(),
+		"activeRequests": st.activeRequests,
+		"stateStr":       st.stateStr,
 	}
 	err := statusTemplate.Execute(w, ctx)
 	if err != nil {

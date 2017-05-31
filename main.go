@@ -4,6 +4,7 @@ package main
 // TODO: add TLS to uplink (including reloads)
 // TODO: proper logging
 // TODO: keepalive?
+// TODO: disconnect controller from RedisProxy completely
 
 import (
 	"bufio"
@@ -56,7 +57,8 @@ type RedisProxy struct {
 	config                   *RedisProxyConfig
 	requestPermissionChannel chan chan bool
 	releasePermissionChannel chan bool
-	controllerStateChannel   chan chan ControllerState
+	controllerStateChannel   chan chan *ControllerState
+	controllerCommandChannel chan int
 }
 
 func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
@@ -64,7 +66,7 @@ func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
 		config: config,
 		requestPermissionChannel: make(chan chan bool),
 		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
-		controllerStateChannel:   make(chan chan ControllerState)}
+		controllerStateChannel:   make(chan chan *ControllerState)}
 }
 
 func (proxy *RedisProxy) run() {
@@ -111,14 +113,6 @@ func (proxy *RedisProxy) watchSignals() {
 		fmt.Printf("Got signal: %v, reloading config\n", s)
 		proxy.reloadConfig()
 	}
-}
-
-func (proxy *RedisProxy) activeRequests() int {
-	ch := make(chan ControllerState)
-	proxy.controllerStateChannel <- ch
-	resp := <-ch
-
-	return resp.activeRequests
 }
 
 func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
