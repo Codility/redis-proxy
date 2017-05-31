@@ -2,9 +2,7 @@ package main
 
 // TODO: add TLS to listener and admin
 // TODO: add TLS to uplink (including reloads)
-// TODO: better names for resp New*er
 // TODO: proper logging
-// TODO: guard config access with a mutex
 // TODO: keepalive?
 
 import (
