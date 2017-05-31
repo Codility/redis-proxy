@@ -10,7 +10,7 @@ import (
 
 func (proxy *RedisProxy) publishAdminInterface() {
 	config := proxy.config
-	fmt.Printf("Admin URL: http://%s/\n", config.AdminOn)
+	log.Printf("Admin URL: http://%s/\n", config.AdminOn)
 	log.Fatal(http.ListenAndServe(config.AdminOn, proxy))
 }
 

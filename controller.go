@@ -1,6 +1,6 @@
 package main
 
-import "fmt"
+import "log"
 
 const (
 	PROXY_RUNNING = iota
@@ -101,7 +101,7 @@ func (controller *ProxyController) run() {
 			case CMD_RELOAD:
 				state = PROXY_RELOADING
 			default:
-				fmt.Println("Unknown controller command:", cmd)
+				log.Print("Unknown controller command:", cmd)
 			}
 		}
 	}

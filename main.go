@@ -11,8 +11,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -74,7 +74,7 @@ func (proxy *RedisProxy) run() {
 		panic(err)
 	}
 
-	fmt.Println("Listening on", proxy.config.ListenOn)
+	log.Println("Listening on", proxy.config.ListenOn)
 
 	go proxy.watchSignals()
 	go proxy.controller.run()
@@ -92,12 +92,12 @@ func (proxy *RedisProxy) run() {
 func (proxy *RedisProxy) reloadConfig() {
 	newConfig, err := loadConfig(CONFIG_FILE)
 	if err != nil {
-		fmt.Printf("Got an error while loading %s: %s.  Keeping old config.", CONFIG_FILE, err)
+		log.Printf("Got an error while loading %s: %s.  Keeping old config.", CONFIG_FILE, err)
 		return
 	}
 
 	if err := proxy.verifyNewConfig(newConfig); err != nil {
-		fmt.Printf("Can not reload into new config: %s.  Keeping old config.", err)
+		log.Printf("Can not reload into new config: %s.  Keeping old config.", err)
 		return
 	}
 	proxy.config = newConfig
@@ -109,7 +109,7 @@ func (proxy *RedisProxy) watchSignals() {
 
 	for {
 		s := <-c
-		fmt.Printf("Got signal: %v, reloading config\n", s)
+		log.Printf("Got signal: %v, reloading config\n", s)
 		proxy.controller.Reload()
 	}
 }
@@ -126,7 +126,7 @@ func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
 }
 
 func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
-	fmt.Println("Handling new client:", cliConn)
+	log.Println("Handling new client:", cliConn)
 
 	// TODO: catch and log panics
 	defer cliConn.Close()
@@ -135,10 +135,10 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 
 	uplinkAddr := proxy.config.UplinkAddr
 
-	fmt.Println("Dialing", uplinkAddr)
+	log.Println("Dialing", uplinkAddr)
 	uplinkConn, err := net.Dial("tcp", uplinkAddr)
 	if err != nil {
-		fmt.Printf("Dial error: %v\n", err)
+		log.Printf("Dial error: %v\n", err)
 		return
 	}
 	defer func() {
@@ -152,7 +152,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 	for {
 		req, err := cliReader.ReadObject()
 		if err != nil {
-			fmt.Printf("Read error: %v\n", err)
+			log.Printf("Read error: %v\n", err)
 			return
 		}
 
@@ -160,7 +160,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			currUplinkAddr := proxy.config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr
-				fmt.Println("Redialing", uplinkAddr)
+				log.Println("Redialing", uplinkAddr)
 				uplinkConn.Close()
 				uplinkConn, err = net.Dial("tcp", uplinkAddr)
 				if err != nil {
@@ -177,7 +177,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			return uplinkReader.ReadObject()
 		})
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			log.Printf("Error: %v\n", err)
 			return
 		}
 
