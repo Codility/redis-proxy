@@ -1,12 +1,5 @@
 package main
 
-// TODO: add TLS to listener and admin
-// TODO: add TLS to uplink (including reloads)
-// TODO: proper logging
-// TODO: keepalive?
-// TODO: disconnect controller from RedisProxy completely
-// TODO: get rid of circular dependency between RedisProxy and ProxyController
-
 import (
 	"bufio"
 	"encoding/json"

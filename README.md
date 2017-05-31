@@ -2,6 +2,15 @@ Redis Proxy
 ===========
 
 
+Current state
+-------------
+
+ - TODO: add TLS to listener and admin
+ - TODO: add TLS to uplink (including reloads)
+ - TODO: keepalive?
+ - TODO: disconnect controller from RedisProxy completely
+ - TODO: get rid of circular dependency between RedisProxy and ProxyController
+
 Requirements
 ------------
 
