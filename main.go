@@ -142,9 +142,9 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 		return
 	}
 	defer func() {
-		// TODO: does this actually close the right connection
-		// after reloads?
-		uplinkConn.Close()
+		if uplinkConn != nil {
+			uplinkConn.Close()
+		}
 	}()
 	uplinkReader := NewReader(bufio.NewReader(uplinkConn))
 	uplinkWriter := bufio.NewWriter(uplinkConn)
