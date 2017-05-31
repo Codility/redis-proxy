@@ -12,22 +12,27 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/ioutil"
+	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 const CONFIG_FILE = "config.json"
+const READ_TIME_LIMIT = 5 * time.Second
 
 func main() {
 	config, err := loadConfig(CONFIG_FILE)
 	if err != nil {
 		panic(err)
 	}
-	proxy := RedisProxy{config: config}
+	proxy := NewRedisProxy(config)
 	proxy.run()
 }
 
@@ -63,9 +68,21 @@ func (config *RedisProxyConfig) canReload(newConfig *RedisProxyConfig) error {
 ////////////////////////////////////////
 // RedisProxy
 
+const TICKET_COUNT = 100
+
 type RedisProxy struct {
 	mu     sync.Mutex
 	config *RedisProxyConfig
+
+	enterExecutionChannel chan bool
+	leaveExecutionChannel chan bool
+}
+
+func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
+	return &RedisProxy{
+		config:                config,
+		enterExecutionChannel: make(chan bool, TICKET_COUNT),
+		leaveExecutionChannel: make(chan bool, TICKET_COUNT)}
 }
 
 func (proxy *RedisProxy) run() {
@@ -77,6 +94,8 @@ func (proxy *RedisProxy) run() {
 	fmt.Println("Listening on", proxy.config.ListenOn)
 
 	go proxy.watchSignals()
+	go proxy.executionLimiter()
+	go proxy.adminPage()
 
 	for {
 		conn, err := listener.Accept()
@@ -126,7 +145,74 @@ func (proxy *RedisProxy) watchSignals() {
 	}
 }
 
+func (proxy *RedisProxy) adminPage() {
+	config := proxy.getConfig()
+	fmt.Printf("Admin URL: http://%s/\n", config.AdminOn)
+	log.Fatal(http.ListenAndServe(config.AdminOn, proxy))
+}
+
+var statusTemplate *template.Template
+
+func init() {
+	const statusHtml = `
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Redis Proxy status</title>
+	</head>
+	<body>
+		<div>Active requests: {{.ActiveRequests}}</div>
+		<form action="." method="POST">
+		</form>
+	</body>
+</html>
+`
+
+	var err error
+	statusTemplate, err = template.New("status").Parse(statusHtml)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := map[string]interface{}{
+		"ActiveRequests": TICKET_COUNT - len(proxy.enterExecutionChannel),
+	}
+	err := statusTemplate.Execute(w, ctx)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (proxy *RedisProxy) executionLimiter() {
+	for i := 0; i < TICKET_COUNT; i++ {
+		proxy.enterExecutionChannel <- true
+	}
+	for {
+		<-proxy.leaveExecutionChannel
+		proxy.enterExecutionChannel <- true
+	}
+}
+
+func (proxy *RedisProxy) EnterExecution() {
+	<-proxy.enterExecutionChannel
+}
+
+func (proxy *RedisProxy) LeaveExecution() {
+	proxy.leaveExecutionChannel <- true
+}
+
+func (proxy *RedisProxy) ExecuteCall(block func() ([]byte, error)) ([]byte, error) {
+	proxy.EnterExecution()
+	defer proxy.LeaveExecution()
+
+	return block()
+}
+
 func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
+	fmt.Println("Handling new client:", cliConn)
+
 	// TODO: catch and log panics
 	defer cliConn.Close()
 	cliReader := NewReader(bufio.NewReader(cliConn))
@@ -154,27 +240,30 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			fmt.Printf("Read error: %v\n", err)
 			return
 		}
+		fmt.Printf("%s\n", req)
 
-		currConfig := proxy.getConfig()
-		if config != currConfig {
-			config = currConfig
-			fmt.Println("Redialing", config.UplinkAddr)
-			uplinkConn.Close()
-			uplinkConn, err = net.Dial("tcp", config.UplinkAddr)
-			if err != nil {
-				fmt.Printf("Dial error: %v\n", err)
-				return
+		resp, err := proxy.ExecuteCall(func() ([]byte, error) {
+			currConfig := proxy.getConfig()
+			if config != currConfig {
+				config = currConfig
+				fmt.Println("Redialing", config.UplinkAddr)
+				uplinkConn.Close()
+				uplinkConn, err = net.Dial("tcp", config.UplinkAddr)
+				if err != nil {
+					return nil, err
+				}
+				uplinkReader = NewReader(bufio.NewReader(uplinkConn))
+				uplinkWriter = bufio.NewWriter(uplinkConn)
 			}
-			uplinkReader = NewReader(bufio.NewReader(uplinkConn))
-			uplinkWriter = bufio.NewWriter(uplinkConn)
-		}
 
-		uplinkWriter.Write(req)
-		uplinkWriter.Flush()
+			uplinkWriter.Write(req)
+			uplinkWriter.Flush()
 
-		resp, err := uplinkReader.ReadObject()
+			uplinkConn.SetReadDeadline(time.Now().Add(READ_TIME_LIMIT))
+			return uplinkReader.ReadObject()
+		})
 		if err != nil {
-			fmt.Printf("Read error: %v\n", err)
+			fmt.Printf("Error: %v\n", err)
 			return
 		}
 
