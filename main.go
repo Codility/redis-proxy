@@ -54,19 +54,19 @@ func loadConfig(fname string) (*RedisProxyConfig, error) {
 ////////////////////////////////////////
 // RedisProxy
 
-const TICKET_COUNT = 100
-
 type RedisProxy struct {
-	config                *RedisProxyConfig
-	enterExecutionChannel chan bool
-	leaveExecutionChannel chan bool
+	config                   *RedisProxyConfig
+	requestPermissionChannel chan chan bool
+	releasePermissionChannel chan bool
+	controllerStateChannel   chan chan ControllerState
 }
 
 func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
 	return &RedisProxy{
-		config:                config,
-		enterExecutionChannel: make(chan bool, TICKET_COUNT),
-		leaveExecutionChannel: make(chan bool, TICKET_COUNT)}
+		config: config,
+		requestPermissionChannel: make(chan chan bool),
+		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
+		controllerStateChannel:   make(chan chan ControllerState)}
 }
 
 func (proxy *RedisProxy) run() {
@@ -78,7 +78,7 @@ func (proxy *RedisProxy) run() {
 	fmt.Println("Listening on", proxy.config.ListenOn)
 
 	go proxy.watchSignals()
-	go proxy.executionLimiter()
+	go proxy.controller()
 	go proxy.publishAdminInterface()
 
 	for {
@@ -116,7 +116,11 @@ func (proxy *RedisProxy) watchSignals() {
 }
 
 func (proxy *RedisProxy) activeRequests() int {
-	return TICKET_COUNT - len(proxy.enterExecutionChannel)
+	ch := make(chan ControllerState)
+	proxy.controllerStateChannel <- ch
+	resp := <-ch
+
+	return resp.activeRequests
 }
 
 func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
@@ -128,31 +132,6 @@ func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
 		return errors.New("New config must have the same admin_on address as the old one.")
 	}
 	return nil
-}
-
-func (proxy *RedisProxy) executionLimiter() {
-	for i := 0; i < TICKET_COUNT; i++ {
-		proxy.enterExecutionChannel <- true
-	}
-	for {
-		<-proxy.leaveExecutionChannel
-		proxy.enterExecutionChannel <- true
-	}
-}
-
-func (proxy *RedisProxy) enterExecution() {
-	<-proxy.enterExecutionChannel
-}
-
-func (proxy *RedisProxy) leaveExecution() {
-	proxy.leaveExecutionChannel <- true
-}
-
-func (proxy *RedisProxy) executeCall(block func() ([]byte, error)) ([]byte, error) {
-	proxy.enterExecution()
-	defer proxy.leaveExecution()
-
-	return block()
 }
 
 func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
