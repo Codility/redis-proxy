@@ -11,20 +11,26 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"flag"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
 
-const CONFIG_FILE = "config.json"
-const READ_TIME_LIMIT = 5 * time.Second
+var (
+	config_file     = flag.String("f", "config.json", "Config file")
+	read_time_limit = flag.Duration("t", 5*time.Second, "Max duration for a query")
+	log_messages    = flag.Bool("o", false, "Show requests and responses")
+)
 
 func main() {
-	config, err := loadConfig(CONFIG_FILE)
+	flag.Parse()
+	config, err := loadConfig(*config_file)
 	if err != nil {
 		panic(err)
 	}
@@ -90,9 +96,9 @@ func (proxy *RedisProxy) run() {
 }
 
 func (proxy *RedisProxy) reloadConfig() {
-	newConfig, err := loadConfig(CONFIG_FILE)
+	newConfig, err := loadConfig(*config_file)
 	if err != nil {
-		log.Printf("Got an error while loading %s: %s.  Keeping old config.", CONFIG_FILE, err)
+		log.Printf("Got an error while loading %s: %s.  Keeping old config.", *config_file, err)
 		return
 	}
 
@@ -155,6 +161,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			log.Printf("Read error: %v\n", err)
 			return
 		}
+		proxy.LogMessage(cliConn.RemoteAddr(), true, req)
 
 		resp, err := proxy.controller.ExecuteCall(func() ([]byte, error) {
 			currUplinkAddr := proxy.config.UplinkAddr
@@ -173,15 +180,32 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			uplinkWriter.Write(req)
 			uplinkWriter.Flush()
 
-			uplinkConn.SetReadDeadline(time.Now().Add(READ_TIME_LIMIT))
+			uplinkConn.SetReadDeadline(time.Now().Add(*read_time_limit))
 			return uplinkReader.ReadObject()
 		})
 		if err != nil {
 			log.Printf("Error: %v\n", err)
 			return
 		}
+		proxy.LogMessage(cliConn.RemoteAddr(), false, resp)
 
 		cliWriter.Write(resp)
 		cliWriter.Flush()
 	}
+}
+
+func (proxy *RedisProxy) LogMessage(addr net.Addr, inbound bool, msg []byte) {
+	if !*log_messages {
+		return
+	}
+	dirStr := "<"
+	if inbound {
+		dirStr = ">"
+	}
+
+	msgStr := string(msg)
+	msgStr = strings.Replace(msgStr, "\n", "\\n", -1)
+	msgStr = strings.Replace(msgStr, "\r", "\\r", -1)
+
+	log.Printf("%s %s %s", addr, dirStr, msgStr)
 }
