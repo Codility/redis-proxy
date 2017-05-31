@@ -57,7 +57,7 @@ type RedisProxy struct {
 	config                   *RedisProxyConfig
 	requestPermissionChannel chan chan bool
 	releasePermissionChannel chan bool
-	controllerStateChannel   chan chan *ControllerState
+	controllerInfoChannel    chan chan *ControllerInfo
 	controllerCommandChannel chan int
 }
 
@@ -66,7 +66,7 @@ func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
 		config: config,
 		requestPermissionChannel: make(chan chan bool),
 		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
-		controllerStateChannel:   make(chan chan *ControllerState),
+		controllerInfoChannel:    make(chan chan *ControllerInfo),
 		controllerCommandChannel: make(chan int)}
 }
 

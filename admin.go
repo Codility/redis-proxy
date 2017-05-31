@@ -55,7 +55,7 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 	}
 
-	st := proxy.getControllerState()
+	st := proxy.getControllerInfo()
 
 	configBytes, _ := json.MarshalIndent(st.config, "", "    ")
 	ctx := map[string]interface{}{

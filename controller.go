@@ -13,9 +13,7 @@ const (
 	CMD_RELOAD
 )
 
-// TODO: find better name[s] for state and ControllerState
-
-type ControllerState struct {
+type ControllerInfo struct {
 	activeRequests int
 	state          int
 	stateStr       string
@@ -71,8 +69,8 @@ func (proxy *RedisProxy) controller() {
 		case _ = <-proxy.releasePermissionChannel:
 			activeRequests--
 
-		case stateCh := <-proxy.controllerStateChannel:
-			stateCh <- &ControllerState{
+		case stateCh := <-proxy.controllerInfoChannel:
+			stateCh <- &ControllerInfo{
 				activeRequests: activeRequests,
 				state:          state,
 				stateStr:       getStateStr(state),
@@ -110,9 +108,9 @@ func (proxy *RedisProxy) executeCall(block func() ([]byte, error)) ([]byte, erro
 	return block()
 }
 
-func (proxy *RedisProxy) getControllerState() *ControllerState {
-	ch := make(chan *ControllerState)
-	proxy.controllerStateChannel <- ch
+func (proxy *RedisProxy) getControllerInfo() *ControllerInfo {
+	ch := make(chan *ControllerInfo)
+	proxy.controllerInfoChannel <- ch
 	return <-ch
 }
 
