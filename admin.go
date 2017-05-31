@@ -41,6 +41,7 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		r.ParseForm()
 		cmd := r.Form["cmd"][0]
+		log.Println("Received cmd:", cmd)
 		switch cmd {
 		case "pause":
 			proxy.controller.Pause()
@@ -53,6 +54,7 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+		return
 	}
 
 	st := proxy.controller.GetInfo()

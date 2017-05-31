@@ -126,7 +126,7 @@ func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
 }
 
 func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
-	log.Println("Handling new client:", cliConn)
+	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
 	// TODO: catch and log panics
 	defer cliConn.Close()
