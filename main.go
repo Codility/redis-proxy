@@ -12,11 +12,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"io/ioutil"
-	"log"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -92,7 +89,7 @@ func (proxy *RedisProxy) run() {
 
 	go proxy.watchSignals()
 	go proxy.executionLimiter()
-	go proxy.adminPage()
+	go proxy.publishAdminInterface()
 
 	for {
 		conn, err := listener.Accept()
@@ -128,44 +125,8 @@ func (proxy *RedisProxy) watchSignals() {
 	}
 }
 
-func (proxy *RedisProxy) adminPage() {
-	config := proxy.config
-	fmt.Printf("Admin URL: http://%s/\n", config.AdminOn)
-	log.Fatal(http.ListenAndServe(config.AdminOn, proxy))
-}
-
-var statusTemplate *template.Template
-
-func init() {
-	const statusHtml = `
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Redis Proxy status</title>
-	</head>
-	<body>
-		<div>Active requests: {{.ActiveRequests}}</div>
-		<form action="." method="POST">
-		</form>
-	</body>
-</html>
-`
-
-	var err error
-	statusTemplate, err = template.New("status").Parse(statusHtml)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := map[string]interface{}{
-		"ActiveRequests": TICKET_COUNT - len(proxy.enterExecutionChannel),
-	}
-	err := statusTemplate.Execute(w, ctx)
-	if err != nil {
-		panic(err)
-	}
+func (proxy *RedisProxy) activeRequests() int {
+	return TICKET_COUNT - len(proxy.enterExecutionChannel)
 }
 
 func (proxy *RedisProxy) executionLimiter() {
