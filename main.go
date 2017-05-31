@@ -140,17 +140,17 @@ func (proxy *RedisProxy) executionLimiter() {
 	}
 }
 
-func (proxy *RedisProxy) EnterExecution() {
+func (proxy *RedisProxy) enterExecution() {
 	<-proxy.enterExecutionChannel
 }
 
-func (proxy *RedisProxy) LeaveExecution() {
+func (proxy *RedisProxy) leaveExecution() {
 	proxy.leaveExecutionChannel <- true
 }
 
-func (proxy *RedisProxy) ExecuteCall(block func() ([]byte, error)) ([]byte, error) {
-	proxy.EnterExecution()
-	defer proxy.LeaveExecution()
+func (proxy *RedisProxy) executeCall(block func() ([]byte, error)) ([]byte, error) {
+	proxy.enterExecution()
+	defer proxy.leaveExecution()
 
 	return block()
 }
@@ -185,9 +185,8 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			fmt.Printf("Read error: %v\n", err)
 			return
 		}
-		fmt.Printf("%s\n", req)
 
-		resp, err := proxy.ExecuteCall(func() ([]byte, error) {
+		resp, err := proxy.executeCall(func() ([]byte, error) {
 			currUplinkAddr := proxy.config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr
