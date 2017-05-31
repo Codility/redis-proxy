@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 const (
 	PROXY_RUNNING = iota
 	PROXY_PAUSING
@@ -44,7 +42,6 @@ func (proxy *RedisProxy) controller() {
 		case PROXY_PAUSING:
 			if activeRequests == 0 {
 				state = PROXY_PAUSED
-				fmt.Println("STATE -> PAUSED")
 				continue
 			}
 			requestPermissionChannel = nil
@@ -71,10 +68,8 @@ func (proxy *RedisProxy) controller() {
 			switch cmd {
 			case CMD_PAUSE:
 				state = PROXY_PAUSING
-				fmt.Println("STATE -> PAUSING")
 			case CMD_UNPAUSE:
 				state = PROXY_RUNNING
-				fmt.Println("STATE -> RUNNING")
 			}
 		}
 	}
@@ -101,4 +96,12 @@ func (proxy *RedisProxy) getControllerState() *ControllerState {
 	ch := make(chan *ControllerState)
 	proxy.controllerStateChannel <- ch
 	return <-ch
+}
+
+func (proxy *RedisProxy) pause() {
+	proxy.controllerCommandChannel <- CMD_PAUSE
+}
+
+func (proxy *RedisProxy) unpause() {
+	proxy.controllerCommandChannel <- CMD_UNPAUSE
 }

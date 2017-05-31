@@ -66,7 +66,8 @@ func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
 		config: config,
 		requestPermissionChannel: make(chan chan bool),
 		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
-		controllerStateChannel:   make(chan chan *ControllerState)}
+		controllerStateChannel:   make(chan chan *ControllerState),
+		controllerCommandChannel: make(chan int)}
 }
 
 func (proxy *RedisProxy) run() {

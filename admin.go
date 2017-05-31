@@ -33,6 +33,21 @@ const statusHtml = `
 `
 
 func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		r.ParseForm()
+		cmd := r.Form["cmd"][0]
+		switch cmd {
+		case "pause":
+			proxy.pause()
+		case "unpause":
+			proxy.unpause()
+		default:
+			http.Error(w, fmt.Sprintf("Unknown cmd: '%s'", cmd), http.StatusBadRequest)
+			return
+		}
+		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+	}
+
 	st := proxy.getControllerState()
 	ctx := map[string]interface{}{
 		"activeRequests": st.activeRequests,
