@@ -38,7 +38,6 @@ Config file
 ```
 {
   "uplink_addr": "localhost:6379",
-  "uplink_use_tls": false,
   "listen_on": "127.0.0.1:7010",
   "admin_on": "127.0.0.1:7011"
 }

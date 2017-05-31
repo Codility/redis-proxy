@@ -42,10 +42,9 @@ func main() {
 // RedisProxyConfig
 
 type RedisProxyConfig struct {
-	UplinkAddr   string `json:"uplink_addr"`
-	UplinkUseTLS bool   `json:"uplink_use_tls"`
-	ListenOn     string `json:"listen_on"`
-	AdminOn      string `json:"admin_on"`
+	UplinkAddr string `json:"uplink_addr"`
+	ListenOn   string `json:"listen_on"`
+	AdminOn    string `json:"admin_on"`
 }
 
 func loadConfig(fname string) (*RedisProxyConfig, error) {
