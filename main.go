@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -71,9 +70,7 @@ func (config *RedisProxyConfig) canReload(newConfig *RedisProxyConfig) error {
 const TICKET_COUNT = 100
 
 type RedisProxy struct {
-	mu     sync.Mutex
-	config *RedisProxyConfig
-
+	config                *RedisProxyConfig
 	enterExecutionChannel chan bool
 	leaveExecutionChannel chan bool
 }
@@ -106,20 +103,6 @@ func (proxy *RedisProxy) run() {
 	}
 }
 
-func (proxy *RedisProxy) getConfig() *RedisProxyConfig {
-	proxy.mu.Lock()
-	defer proxy.mu.Unlock()
-
-	return proxy.config
-}
-
-func (proxy *RedisProxy) setConfig(config *RedisProxyConfig) {
-	proxy.mu.Lock()
-	defer proxy.mu.Unlock()
-
-	proxy.config = config
-}
-
 func (proxy *RedisProxy) reloadConfig() {
 	newConfig, err := loadConfig(CONFIG_FILE)
 	if err != nil {
@@ -127,11 +110,11 @@ func (proxy *RedisProxy) reloadConfig() {
 		return
 	}
 
-	if err := newConfig.canReload(proxy.getConfig()); err != nil {
+	if err := newConfig.canReload(proxy.config); err != nil {
 		fmt.Printf("Can not reload into new config: %s.  Keeping old config.", err)
 		return
 	}
-	proxy.setConfig(newConfig)
+	proxy.config = newConfig
 }
 
 func (proxy *RedisProxy) watchSignals() {
@@ -146,7 +129,7 @@ func (proxy *RedisProxy) watchSignals() {
 }
 
 func (proxy *RedisProxy) adminPage() {
-	config := proxy.getConfig()
+	config := proxy.config
 	fmt.Printf("Admin URL: http://%s/\n", config.AdminOn)
 	log.Fatal(http.ListenAndServe(config.AdminOn, proxy))
 }
@@ -218,10 +201,10 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 	cliReader := NewReader(bufio.NewReader(cliConn))
 	cliWriter := bufio.NewWriter(cliConn)
 
-	config := proxy.getConfig()
+	uplinkAddr := proxy.config.UplinkAddr
 
-	fmt.Println("Dialing", config.UplinkAddr)
-	uplinkConn, err := net.Dial("tcp", config.UplinkAddr)
+	fmt.Println("Dialing", uplinkAddr)
+	uplinkConn, err := net.Dial("tcp", uplinkAddr)
 	if err != nil {
 		fmt.Printf("Dial error: %v\n", err)
 		return
@@ -243,12 +226,12 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 		fmt.Printf("%s\n", req)
 
 		resp, err := proxy.ExecuteCall(func() ([]byte, error) {
-			currConfig := proxy.getConfig()
-			if config != currConfig {
-				config = currConfig
-				fmt.Println("Redialing", config.UplinkAddr)
+			currUplinkAddr := proxy.config.UplinkAddr
+			if uplinkAddr != currUplinkAddr {
+				uplinkAddr = currUplinkAddr
+				fmt.Println("Redialing", uplinkAddr)
 				uplinkConn.Close()
-				uplinkConn, err = net.Dial("tcp", config.UplinkAddr)
+				uplinkConn, err = net.Dial("tcp", uplinkAddr)
 				if err != nil {
 					return nil, err
 				}
