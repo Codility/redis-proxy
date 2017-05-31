@@ -51,16 +51,6 @@ func loadConfig(fname string) (*RedisProxyConfig, error) {
 	return &config, json.Unmarshal(configJson, &config)
 }
 
-func (config *RedisProxyConfig) canReload(newConfig *RedisProxyConfig) error {
-	if config.ListenOn != newConfig.ListenOn {
-		return errors.New("New config must have the same listen_on address as the old one.")
-	}
-	if config.AdminOn != newConfig.AdminOn {
-		return errors.New("New config must have the same admin_on address as the old one.")
-	}
-	return nil
-}
-
 ////////////////////////////////////////
 // RedisProxy
 
@@ -107,7 +97,7 @@ func (proxy *RedisProxy) reloadConfig() {
 		return
 	}
 
-	if err := newConfig.canReload(proxy.config); err != nil {
+	if err := proxy.verifyNewConfig(newConfig); err != nil {
 		fmt.Printf("Can not reload into new config: %s.  Keeping old config.", err)
 		return
 	}
@@ -127,6 +117,17 @@ func (proxy *RedisProxy) watchSignals() {
 
 func (proxy *RedisProxy) activeRequests() int {
 	return TICKET_COUNT - len(proxy.enterExecutionChannel)
+}
+
+func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
+	config := proxy.config
+	if config.ListenOn != newConfig.ListenOn {
+		return errors.New("New config must have the same listen_on address as the old one.")
+	}
+	if config.AdminOn != newConfig.AdminOn {
+		return errors.New("New config must have the same admin_on address as the old one.")
+	}
+	return nil
 }
 
 func (proxy *RedisProxy) executionLimiter() {
