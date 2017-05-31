@@ -57,10 +57,10 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	st := proxy.controller.GetInfo()
 
-	configBytes, _ := json.MarshalIndent(st.config, "", "    ")
+	configBytes, _ := json.MarshalIndent(st.Config, "", "    ")
 	ctx := map[string]interface{}{
-		"activeRequests": st.activeRequests,
-		"stateStr":       st.stateStr,
+		"activeRequests": st.ActiveRequests,
+		"stateStr":       st.StateStr(),
 		"configStr":      string(configBytes),
 	}
 	err := statusTemplate.Execute(w, ctx)

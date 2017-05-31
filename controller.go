@@ -13,34 +13,12 @@ const (
 	CMD_RELOAD
 )
 
-type ControllerInfo struct {
-	activeRequests int
-	state          int
-	stateStr       string
-	config         *RedisProxyConfig
-}
-
 type ProxyController struct {
 	requestPermissionChannel chan chan bool
 	releasePermissionChannel chan bool
 	infoChannel              chan chan *ControllerInfo
 	commandChannel           chan int
 	proxy                    *RedisProxy
-}
-
-func getStateStr(state int) string {
-	switch state {
-	case PROXY_RUNNING:
-		return "running"
-	case PROXY_PAUSING:
-		return "pausing"
-	case PROXY_PAUSED:
-		return "paused"
-	case PROXY_RELOADING:
-		return "reloading"
-	default:
-		return "unknown"
-	}
 }
 
 func NewProxyController() *ProxyController {
@@ -87,10 +65,9 @@ func (controller *ProxyController) run() {
 
 		case stateCh := <-controller.infoChannel:
 			stateCh <- &ControllerInfo{
-				activeRequests: activeRequests,
-				state:          state,
-				stateStr:       getStateStr(state),
-				config:         controller.proxy.config}
+				ActiveRequests: activeRequests,
+				State:          state,
+				Config:         controller.proxy.config}
 
 		case cmd := <-controller.commandChannel:
 			switch cmd {
@@ -140,4 +117,28 @@ func (controller *ProxyController) Unpause() {
 
 func (controller *ProxyController) Reload() {
 	controller.commandChannel <- CMD_RELOAD
+}
+
+////////////////////////////////////////
+// ControllerInfo
+
+type ControllerInfo struct {
+	ActiveRequests int
+	State          int
+	Config         *RedisProxyConfig
+}
+
+func (ci *ControllerInfo) StateStr() string {
+	switch ci.State {
+	case PROXY_RUNNING:
+		return "running"
+	case PROXY_PAUSING:
+		return "pausing"
+	case PROXY_PAUSED:
+		return "paused"
+	case PROXY_RELOADING:
+		return "reloading"
+	default:
+		return "unknown"
+	}
 }
