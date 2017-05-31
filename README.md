@@ -22,14 +22,25 @@ Requirements
   state (like PSUBSCRIBE)
 
 
-Ideas
------
-
-PAUSE: expose an HTTP interface with current status on GET, and POST
-operations for PAUSE and UNPAUSE.
-
 All the commands we're interested in match the simple request-response
 pattern.  There is no need to handle push data from the server.
+
+
+Usage
+-----
+
+Create config.json based on config_example.json
+
+To reload config.json, send HUP to the process or use http interface:
+
+```
+# pause (returns immediately)
+curl http://localhost:7011 -d cmd=pause
+# unpause
+curl http://localhost:7011 -d cmd=unpause
+# reload config (acts like pause + reload + unpause)
+curl http://localhost:7011 -d cmd=reload
+```
 
 
 Config file
