@@ -5,6 +5,7 @@ package main
 // TODO: proper logging
 // TODO: keepalive?
 // TODO: disconnect controller from RedisProxy completely
+// TODO: get rid of circular dependency between RedisProxy and ProxyController
 
 import (
 	"bufio"
@@ -54,20 +55,17 @@ func loadConfig(fname string) (*RedisProxyConfig, error) {
 // RedisProxy
 
 type RedisProxy struct {
-	config                   *RedisProxyConfig
-	requestPermissionChannel chan chan bool
-	releasePermissionChannel chan bool
-	controllerInfoChannel    chan chan *ControllerInfo
-	controllerCommandChannel chan int
+	config     *RedisProxyConfig
+	controller *ProxyController
 }
 
 func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
-	return &RedisProxy{
-		config: config,
-		requestPermissionChannel: make(chan chan bool),
-		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
-		controllerInfoChannel:    make(chan chan *ControllerInfo),
-		controllerCommandChannel: make(chan int)}
+	proxy := &RedisProxy{
+		config:     config,
+		controller: NewProxyController()}
+	// TODO: clean this up when getting rid of circular dep
+	proxy.controller.proxy = proxy
+	return proxy
 }
 
 func (proxy *RedisProxy) run() {
@@ -79,7 +77,7 @@ func (proxy *RedisProxy) run() {
 	fmt.Println("Listening on", proxy.config.ListenOn)
 
 	go proxy.watchSignals()
-	go proxy.controller()
+	go proxy.controller.run()
 	go proxy.publishAdminInterface()
 
 	for {
@@ -112,7 +110,7 @@ func (proxy *RedisProxy) watchSignals() {
 	for {
 		s := <-c
 		fmt.Printf("Got signal: %v, reloading config\n", s)
-		proxy.reload()
+		proxy.controller.Reload()
 	}
 }
 
@@ -158,7 +156,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			return
 		}
 
-		resp, err := proxy.executeCall(func() ([]byte, error) {
+		resp, err := proxy.controller.ExecuteCall(func() ([]byte, error) {
 			currUplinkAddr := proxy.config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr

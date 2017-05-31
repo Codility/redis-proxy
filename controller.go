@@ -20,6 +20,14 @@ type ControllerInfo struct {
 	config         *RedisProxyConfig
 }
 
+type ProxyController struct {
+	requestPermissionChannel chan chan bool
+	releasePermissionChannel chan bool
+	infoChannel              chan chan *ControllerInfo
+	commandChannel           chan int
+	proxy                    *RedisProxy
+}
+
 func getStateStr(state int) string {
 	switch state {
 	case PROXY_RUNNING:
@@ -35,16 +43,24 @@ func getStateStr(state int) string {
 	}
 }
 
-func (proxy *RedisProxy) controller() {
+func NewProxyController() *ProxyController {
+	return &ProxyController{
+		requestPermissionChannel: make(chan chan bool),
+		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
+		infoChannel:              make(chan chan *ControllerInfo),
+		commandChannel:           make(chan int)}
+}
+
+func (controller *ProxyController) run() {
 	activeRequests := 0
 	state := PROXY_RUNNING
-	requestPermissionChannel := proxy.requestPermissionChannel
+	requestPermissionChannel := controller.requestPermissionChannel
 
 	for {
 		requestPermissionChannel = nil
 		switch state {
 		case PROXY_RUNNING:
-			requestPermissionChannel = proxy.requestPermissionChannel
+			requestPermissionChannel = controller.requestPermissionChannel
 		case PROXY_PAUSING:
 			if activeRequests == 0 {
 				state = PROXY_PAUSED
@@ -52,7 +68,7 @@ func (proxy *RedisProxy) controller() {
 			}
 		case PROXY_RELOADING:
 			if activeRequests == 0 {
-				proxy.reloadConfig()
+				controller.proxy.reloadConfig()
 				state = PROXY_RUNNING
 				continue
 			}
@@ -66,17 +82,17 @@ func (proxy *RedisProxy) controller() {
 		case permCh := <-requestPermissionChannel:
 			permCh <- true
 			activeRequests++
-		case _ = <-proxy.releasePermissionChannel:
+		case _ = <-controller.releasePermissionChannel:
 			activeRequests--
 
-		case stateCh := <-proxy.controllerInfoChannel:
+		case stateCh := <-controller.infoChannel:
 			stateCh <- &ControllerInfo{
 				activeRequests: activeRequests,
 				state:          state,
 				stateStr:       getStateStr(state),
-				config:         proxy.config}
+				config:         controller.proxy.config}
 
-		case cmd := <-proxy.controllerCommandChannel:
+		case cmd := <-controller.commandChannel:
 			switch cmd {
 			case CMD_PAUSE:
 				state = PROXY_PAUSING
@@ -91,37 +107,37 @@ func (proxy *RedisProxy) controller() {
 	}
 }
 
-func (proxy *RedisProxy) enterExecution() {
+func (controller *ProxyController) enterExecution() {
 	ch := make(chan bool)
-	proxy.requestPermissionChannel <- ch
+	controller.requestPermissionChannel <- ch
 	<-ch
 }
 
-func (proxy *RedisProxy) leaveExecution() {
-	proxy.releasePermissionChannel <- true
+func (controller *ProxyController) leaveExecution() {
+	controller.releasePermissionChannel <- true
 }
 
-func (proxy *RedisProxy) executeCall(block func() ([]byte, error)) ([]byte, error) {
-	proxy.enterExecution()
-	defer proxy.leaveExecution()
+func (controller *ProxyController) ExecuteCall(block func() ([]byte, error)) ([]byte, error) {
+	controller.enterExecution()
+	defer controller.leaveExecution()
 
 	return block()
 }
 
-func (proxy *RedisProxy) getControllerInfo() *ControllerInfo {
+func (controller *ProxyController) GetInfo() *ControllerInfo {
 	ch := make(chan *ControllerInfo)
-	proxy.controllerInfoChannel <- ch
+	controller.infoChannel <- ch
 	return <-ch
 }
 
-func (proxy *RedisProxy) pause() {
-	proxy.controllerCommandChannel <- CMD_PAUSE
+func (controller *ProxyController) Pause() {
+	controller.commandChannel <- CMD_PAUSE
 }
 
-func (proxy *RedisProxy) unpause() {
-	proxy.controllerCommandChannel <- CMD_UNPAUSE
+func (controller *ProxyController) Unpause() {
+	controller.commandChannel <- CMD_UNPAUSE
 }
 
-func (proxy *RedisProxy) reload() {
-	proxy.controllerCommandChannel <- CMD_RELOAD
+func (controller *ProxyController) Reload() {
+	controller.commandChannel <- CMD_RELOAD
 }

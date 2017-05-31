@@ -43,11 +43,11 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cmd := r.Form["cmd"][0]
 		switch cmd {
 		case "pause":
-			proxy.pause()
+			proxy.controller.Pause()
 		case "unpause":
-			proxy.unpause()
+			proxy.controller.Unpause()
 		case "reload":
-			proxy.reload()
+			proxy.controller.Reload()
 		default:
 			http.Error(w, fmt.Sprintf("Unknown cmd: '%s'", cmd), http.StatusBadRequest)
 			return
@@ -55,7 +55,7 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 	}
 
-	st := proxy.getControllerInfo()
+	st := proxy.controller.GetInfo()
 
 	configBytes, _ := json.MarshalIndent(st.config, "", "    ")
 	ctx := map[string]interface{}{
