@@ -112,7 +112,7 @@ func (proxy *RedisProxy) watchSignals() {
 	for {
 		s := <-c
 		fmt.Printf("Got signal: %v, reloading config\n", s)
-		proxy.reloadConfig()
+		proxy.reload()
 	}
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -24,9 +25,13 @@ const statusHtml = `
 	<body>
 		<div>Active requests: {{.activeRequests}}</div>
 		<div>State: {{.stateStr}}</div>
+		<pre>Config:
+{{.configStr}}
+		</pre>
 		<form action="." method="POST">
 			<button type="submit" name="cmd" value="pause">pause</button>
 			<button type="submit" name="cmd" value="unpause">unpause</button>
+			<button type="submit" name="cmd" value="reload">reload [=pause+reload config+unpause]</button>
 		</form>
 	</body>
 </html>
@@ -41,6 +46,8 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			proxy.pause()
 		case "unpause":
 			proxy.unpause()
+		case "reload":
+			proxy.reload()
 		default:
 			http.Error(w, fmt.Sprintf("Unknown cmd: '%s'", cmd), http.StatusBadRequest)
 			return
@@ -49,9 +56,12 @@ func (proxy *RedisProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	st := proxy.getControllerState()
+
+	configBytes, _ := json.MarshalIndent(st.config, "", "    ")
 	ctx := map[string]interface{}{
 		"activeRequests": st.activeRequests,
 		"stateStr":       st.stateStr,
+		"configStr":      string(configBytes),
 	}
 	err := statusTemplate.Execute(w, ctx)
 	if err != nil {

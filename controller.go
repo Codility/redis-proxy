@@ -1,12 +1,16 @@
 package main
 
+import "fmt"
+
 const (
 	PROXY_RUNNING = iota
 	PROXY_PAUSING
 	PROXY_PAUSED
+	PROXY_RELOADING
 
 	CMD_PAUSE = iota
 	CMD_UNPAUSE
+	CMD_RELOAD
 )
 
 // TODO: find better name[s] for state and ControllerState
@@ -15,6 +19,7 @@ type ControllerState struct {
 	activeRequests int
 	state          int
 	stateStr       string
+	config         *RedisProxyConfig
 }
 
 func getStateStr(state int) string {
@@ -25,6 +30,8 @@ func getStateStr(state int) string {
 		return "pausing"
 	case PROXY_PAUSED:
 		return "paused"
+	case PROXY_RELOADING:
+		return "reloading"
 	default:
 		return "unknown"
 	}
@@ -36,6 +43,7 @@ func (proxy *RedisProxy) controller() {
 	requestPermissionChannel := proxy.requestPermissionChannel
 
 	for {
+		requestPermissionChannel = nil
 		switch state {
 		case PROXY_RUNNING:
 			requestPermissionChannel = proxy.requestPermissionChannel
@@ -44,9 +52,14 @@ func (proxy *RedisProxy) controller() {
 				state = PROXY_PAUSED
 				continue
 			}
-			requestPermissionChannel = nil
+		case PROXY_RELOADING:
+			if activeRequests == 0 {
+				proxy.reloadConfig()
+				state = PROXY_RUNNING
+				continue
+			}
 		case PROXY_PAUSED:
-			requestPermissionChannel = nil
+			// nothing
 		}
 		select {
 		// In states other than PROXY_RUNNING
@@ -62,7 +75,8 @@ func (proxy *RedisProxy) controller() {
 			stateCh <- &ControllerState{
 				activeRequests: activeRequests,
 				state:          state,
-				stateStr:       getStateStr(state)}
+				stateStr:       getStateStr(state),
+				config:         proxy.config}
 
 		case cmd := <-proxy.controllerCommandChannel:
 			switch cmd {
@@ -70,6 +84,10 @@ func (proxy *RedisProxy) controller() {
 				state = PROXY_PAUSING
 			case CMD_UNPAUSE:
 				state = PROXY_RUNNING
+			case CMD_RELOAD:
+				state = PROXY_RELOADING
+			default:
+				fmt.Println("Unknown controller command:", cmd)
 			}
 		}
 	}
@@ -104,4 +122,8 @@ func (proxy *RedisProxy) pause() {
 
 func (proxy *RedisProxy) unpause() {
 	proxy.controllerCommandChannel <- CMD_UNPAUSE
+}
+
+func (proxy *RedisProxy) reload() {
+	proxy.controllerCommandChannel <- CMD_RELOAD
 }
