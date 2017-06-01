@@ -1,4 +1,4 @@
-package main
+package rproxy
 
 import "log"
 
@@ -46,7 +46,7 @@ func (controller *ProxyController) run() {
 			}
 		case PROXY_RELOADING:
 			if activeRequests == 0 {
-				controller.proxy.reloadConfig()
+				controller.proxy.ReloadConfig()
 				state = PROXY_RUNNING
 				continue
 			}

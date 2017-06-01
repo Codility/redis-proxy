@@ -50,15 +50,3 @@ curl http://localhost:7011/cmd/ -d cmd=unpause
 # reload config (acts like pause + reload + unpause)
 curl http://localhost:7011/cmd/ -d cmd=reload
 ```
-
-
-Config file
------------
-
-```
-{
-  "uplink_addr": "localhost:6379",
-  "listen_on": "127.0.0.1:7010",
-  "admin_on": "127.0.0.1:7011"
-}
-```

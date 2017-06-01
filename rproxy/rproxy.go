@@ -1,10 +1,9 @@
-package main
+package rproxy
 
 import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"flag"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,32 +14,18 @@ import (
 	"time"
 )
 
-var (
-	config_file     = flag.String("f", "config.json", "Config file")
-	read_time_limit = flag.Duration("t", 5*time.Second, "Max duration for a query")
-	log_messages    = flag.Bool("o", false, "Show requests and responses")
-)
-
-func main() {
-	flag.Parse()
-	config, err := loadConfig(*config_file)
-	if err != nil {
-		panic(err)
-	}
-	proxy := NewRedisProxy(config)
-	proxy.run()
-}
-
 ////////////////////////////////////////
 // RedisProxyConfig
 
 type RedisProxyConfig struct {
-	UplinkAddr string `json:"uplink_addr"`
-	ListenOn   string `json:"listen_on"`
-	AdminOn    string `json:"admin_on"`
+	UplinkAddr      string `json:"uplink_addr"`
+	ListenOn        string `json:"listen_on"`
+	AdminOn         string `json:"admin_on"`
+	ReadTimeLimitMs int64  `json:"read_time_limit_ms"`
+	LogMessages     bool   `json:"log_messages"`
 }
 
-func loadConfig(fname string) (*RedisProxyConfig, error) {
+func LoadConfig(fname string) (*RedisProxyConfig, error) {
 	configJson, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
@@ -53,20 +38,26 @@ func loadConfig(fname string) (*RedisProxyConfig, error) {
 // RedisProxy
 
 type RedisProxy struct {
-	config     *RedisProxyConfig
-	controller *ProxyController
+	config_file string
+	config      *RedisProxyConfig
+	controller  *ProxyController
 }
 
-func NewRedisProxy(config *RedisProxyConfig) *RedisProxy {
+func NewRedisProxy(config_file string) (*RedisProxy, error) {
+	config, err := LoadConfig(config_file)
+	if err != nil {
+		return nil, err
+	}
 	proxy := &RedisProxy{
-		config:     config,
-		controller: NewProxyController()}
+		config_file: config_file,
+		config:      config,
+		controller:  NewProxyController()}
 	// TODO: clean this up when getting rid of circular dep
 	proxy.controller.proxy = proxy
-	return proxy
+	return proxy, nil
 }
 
-func (proxy *RedisProxy) run() {
+func (proxy *RedisProxy) Run() {
 	listener, err := net.Listen("tcp", proxy.config.ListenOn)
 	if err != nil {
 		panic(err)
@@ -87,10 +78,10 @@ func (proxy *RedisProxy) run() {
 	}
 }
 
-func (proxy *RedisProxy) reloadConfig() {
-	newConfig, err := loadConfig(*config_file)
+func (proxy *RedisProxy) ReloadConfig() {
+	newConfig, err := LoadConfig(proxy.config_file)
 	if err != nil {
-		log.Printf("Got an error while loading %s: %s.  Keeping old config.", *config_file, err)
+		log.Printf("Got an error while loading %s: %s.  Keeping old config.", proxy.config_file, err)
 		return
 	}
 
@@ -172,7 +163,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			uplinkWriter.Write(req)
 			uplinkWriter.Flush()
 
-			uplinkConn.SetReadDeadline(time.Now().Add(*read_time_limit))
+			uplinkConn.SetReadDeadline(time.Now().Add(time.Duration(proxy.config.ReadTimeLimitMs) * time.Millisecond))
 			return uplinkReader.ReadObject()
 		})
 		if err != nil {
@@ -187,7 +178,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 }
 
 func (proxy *RedisProxy) LogMessage(addr net.Addr, inbound bool, msg []byte) {
-	if !*log_messages {
+	if !proxy.config.LogMessages {
 		return
 	}
 	dirStr := "<"

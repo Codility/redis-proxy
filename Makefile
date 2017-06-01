@@ -1,7 +1,7 @@
 all: redis-proxy
 
-redis-proxy: *.go
-	./scripts/go build -o "$@"
+redis-proxy: rproxy/*.go cmd/redis-proxy/*.go
+	./scripts/go build -o "$@" gitlab.codility.net/marcink/redis-proxy/cmd/redis-proxy
 
 .PHONY: test
 test:
