@@ -1,4 +1,4 @@
-package main
+package rproxy
 
 import (
 	"encoding/json"

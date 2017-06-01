@@ -1,6 +1,6 @@
 // From https://www.redisgreen.net/blog/reading-and-writing-redis-protocol/
 
-package main
+package rproxy
 
 import (
 	"bufio"
