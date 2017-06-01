@@ -44,11 +44,11 @@ To reload config.json, send HUP to the process or use http interface:
 
 ```
 # pause (returns immediately)
-curl http://localhost:7011 -d cmd=pause
+curl http://localhost:7011/cmd/ -d cmd=pause
 # unpause
-curl http://localhost:7011 -d cmd=unpause
+curl http://localhost:7011/cmd/ -d cmd=unpause
 # reload config (acts like pause + reload + unpause)
-curl http://localhost:7011 -d cmd=reload
+curl http://localhost:7011/cmd/ -d cmd=reload
 ```
 
 
