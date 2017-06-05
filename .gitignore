@@ -1,4 +1,6 @@
 .gopath
 config.json
-./redis-proxy
-./switch-test
+redis-proxy
+switch-test
+*.rdb
+conf-[ab].json
