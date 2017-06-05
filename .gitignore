@@ -1,3 +1,4 @@
 .gopath
 config.json
-redis-proxy
+./redis-proxy
+./switch-test
