@@ -85,7 +85,7 @@ func (p *Proxy) WriteConfig() {
   "uplink_addr": "localhost:%d",
   "listen_on": "127.0.0.1:%d",
   "admin_on": "127.0.0.1:%d",
-  "log_messages": true,
+  "log_messages": false,
   "read_time_limit_ms": 5000
 }`, p.uplinkPort, p.listenPort, p.adminPort)
 	log.Printf("Proxy[%d -> %d].WriteConfig", p.listenPort, p.uplinkPort)
