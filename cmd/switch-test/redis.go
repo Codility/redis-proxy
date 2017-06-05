@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -29,7 +31,18 @@ func (r *Redis) Start() {
 	if r.cmd != nil {
 		panic("Redis already running")
 	}
-	r.cmd = exec.Command("redis-server", "--port", strconv.Itoa(r.port))
+
+	rdbFile := fmt.Sprintf("save-%d.rdb")
+	os.Remove(rdbFile) // ignore errors
+	r.cmd = exec.Command(
+		"redis-server",
+		"./redis.conf",
+		"--dbfilename", rdbFile,
+		"--port", strconv.Itoa(r.port),
+	)
+
+	handleProcessOutput(r.cmd, fmt.Sprintf("[Redis-%d:stdout]", r.port), fmt.Sprintf("[Redis-%d:stderr]", r.port))
+
 	if err := r.cmd.Start(); err != nil {
 		panic(err)
 	}
@@ -49,6 +62,11 @@ func (r *Redis) Stop() {
 }
 
 func (r *Redis) SlaveOf(master *Redis) {
+	if master == nil {
+		log.Printf("Redis[%d].SlaveOf(none)", r.port)
+	} else {
+		log.Printf("Redis[%d].SlaveOf(%d)", r.port, master.port)
+	}
 	conn, err := net.Dial("tcp", r.Url())
 	if err != nil {
 		panic(err)

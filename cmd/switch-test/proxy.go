@@ -40,6 +40,20 @@ func handleOutput(prefix string, output io.ReadCloser) {
 	}
 }
 
+func handleProcessOutput(cmd *exec.Cmd, stdoutPrefix, stderrPrefix string) {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		panic(err)
+	}
+	go handleOutput(stdoutPrefix, stdout)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		panic(err)
+	}
+	go handleOutput(stderrPrefix, stderr)
+}
+
 func (p *Proxy) Start() {
 	log.Printf("Proxy[%d -> %d].Start", p.listenPort, p.uplinkPort)
 	if p.cmd != nil {
@@ -48,17 +62,7 @@ func (p *Proxy) Start() {
 	p.WriteConfig()
 	p.cmd = exec.Command("./redis-proxy", "-f", p.config_file)
 
-	stdout, err := p.cmd.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
-	go handleOutput(fmt.Sprintf("[%d:stdout]", p.listenPort), stdout)
-
-	stderr, err := p.cmd.StderrPipe()
-	if err != nil {
-		panic(err)
-	}
-	go handleOutput(fmt.Sprintf("[%d:stderr]", p.listenPort), stderr)
+	handleProcessOutput(p.cmd, fmt.Sprintf("[%d:stdout]", p.listenPort), fmt.Sprintf("[%d:stderr]", p.listenPort))
 
 	if err := p.cmd.Start(); err != nil {
 		panic(err)
@@ -81,7 +85,7 @@ func (p *Proxy) WriteConfig() {
   "uplink_addr": "localhost:%d",
   "listen_on": "127.0.0.1:%d",
   "admin_on": "127.0.0.1:%d",
-  "log_messages": false,
+  "log_messages": true,
   "read_time_limit_ms": 5000
 }`, p.uplinkPort, p.listenPort, p.adminPort)
 	log.Printf("Proxy[%d -> %d].WriteConfig", p.listenPort, p.uplinkPort)
