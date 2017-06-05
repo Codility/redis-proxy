@@ -29,7 +29,7 @@ func main() {
 	log.SetFlags(log.Ltime)
 
 	proxy_a := NewProxy("conf-a.json", PROXY_A_PORT, PROXY_A_ADMIN, REDIS_A_PORT)
-	proxy_b := NewProxy("conf-b.json", PROXY_B_PORT, PROXY_B_ADMIN, REDIS_B_PORT)
+	proxy_b := NewProxy("conf-b.json", PROXY_B_PORT, PROXY_B_ADMIN, PROXY_A_PORT)
 
 	proxy_a.Start()
 	defer proxy_a.Stop()
@@ -61,6 +61,7 @@ func main() {
 		proxy_b.PauseAndWait()
 		logStatus()
 		// TODO: wait for replication to catch up
+		time.Sleep(time.Second)
 
 		redis_b.SlaveOf(nil)
 		redis_a.Stop()
@@ -81,6 +82,7 @@ func main() {
 		proxy_a.PauseAndWait()
 		proxy_b.PauseAndWait()
 		// TODO: wait for replication to catch up
+		time.Sleep(time.Second)
 
 		redis_a.SlaveOf(nil)
 		redis_b.Stop()
