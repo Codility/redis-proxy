@@ -122,21 +122,17 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 	cliReader := NewReader(bufio.NewReader(cliConn))
 	cliWriter := bufio.NewWriter(cliConn)
 
-	uplinkAddr := proxy.config.UplinkAddr
+	uplinkAddr := ""
 
-	log.Println("Dialing", uplinkAddr)
-	uplinkConn, err := net.Dial("tcp", uplinkAddr)
-	if err != nil {
-		log.Printf("Dial error: %v\n", err)
-		return
-	}
+	var uplinkConn net.Conn
+	var uplinkReader *RESPReader
+	var uplinkWriter *bufio.Writer
+
 	defer func() {
 		if uplinkConn != nil {
 			uplinkConn.Close()
 		}
 	}()
-	uplinkReader := NewReader(bufio.NewReader(uplinkConn))
-	uplinkWriter := bufio.NewWriter(uplinkConn)
 
 	for {
 		req, err := cliReader.ReadObject()
@@ -150,8 +146,10 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 			currUplinkAddr := proxy.config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr
-				log.Println("Redialing", uplinkAddr)
-				uplinkConn.Close()
+				log.Println("Dialing", uplinkAddr)
+				if uplinkConn != nil {
+					uplinkConn.Close()
+				}
 				uplinkConn, err = net.Dial("tcp", uplinkAddr)
 				if err != nil {
 					return nil, err
