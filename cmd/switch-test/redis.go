@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"gitlab.codility.net/marcink/redis-proxy/rproxy"
 )
@@ -32,7 +33,7 @@ func (r *Redis) Start() {
 		panic("Redis already running")
 	}
 
-	rdbFile := fmt.Sprintf("save-%d.rdb")
+	rdbFile := fmt.Sprintf("save-%d-%d.rdb", r.port, time.Now().Unix())
 	os.Remove(rdbFile) // ignore errors
 	r.cmd = exec.Command(
 		"redis-server",
