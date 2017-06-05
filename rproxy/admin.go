@@ -41,6 +41,7 @@ const statusHtml = `<!DOCTYPE html>
 		<div>As JSON: <a href="status.json">here</a></div>
 		<form action="/cmd/" method="POST">
 			<button type="submit" name="cmd" value="pause">pause</button>
+			<button type="submit" name="cmd" value="pause-and-wait">pause and wait</button>
 			<button type="submit" name="cmd" value="unpause">unpause</button>
 			<button type="submit" name="cmd" value="reload">reload [=pause+reload config+unpause]</button>
 		</form>
@@ -76,6 +77,8 @@ func (proxy *RedisProxy) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 		switch cmd {
 		case "pause":
 			proxy.controller.Pause()
+		case "pause-and-wait":
+			proxy.controller.PauseAndWait()
 		case "unpause":
 			proxy.controller.Unpause()
 		case "reload":

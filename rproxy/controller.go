@@ -1,6 +1,9 @@
 package rproxy
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 const (
 	PROXY_RUNNING = iota
@@ -9,6 +12,7 @@ const (
 	PROXY_RELOADING
 
 	CMD_PAUSE = iota
+	CMD_PAUSE_AND_WAIT
 	CMD_UNPAUSE
 	CMD_RELOAD
 )
@@ -73,6 +77,8 @@ func (controller *ProxyController) run() {
 			switch cmd {
 			case CMD_PAUSE:
 				state = PROXY_PAUSING
+			case CMD_PAUSE_AND_WAIT:
+				state = PROXY_PAUSING
 			case CMD_UNPAUSE:
 				state = PROXY_RUNNING
 			case CMD_RELOAD:
@@ -109,6 +115,19 @@ func (controller *ProxyController) GetInfo() *ControllerInfo {
 
 func (controller *ProxyController) Pause() {
 	controller.commandChannel <- CMD_PAUSE
+}
+
+func (controller *ProxyController) PauseAndWait() {
+	// TODO: push the state change instead of having the client
+	// poll
+	controller.commandChannel <- CMD_PAUSE
+	for {
+		info := controller.GetInfo()
+		if info.ActiveRequests == 0 {
+			return
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 }
 
 func (controller *ProxyController) Unpause() {
