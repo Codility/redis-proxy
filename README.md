@@ -5,13 +5,16 @@ Redis Proxy
 Current state
 -------------
 
+ - TODO: authentication
+   - authenticate clients in proxy
+   - read Redis password from config file
  - TODO: keep track of SELECTed db, re-select after switch
  - TODO: add TLS to listener and admin
  - TODO: add TLS to uplink (including reloads)
  - TODO: keepalive?
  - TODO: get rid of circular dependency between RedisProxy and ProxyController
 
- - switch-test: wait for replication to really catch up
+ - TODO: switch-test: wait for replication to really catch up
  - TODO: move switchover logic to proxy (old proxy can handle the entire process)
 
 Requirements
