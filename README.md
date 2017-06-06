@@ -5,6 +5,7 @@ Redis Proxy
 Current state
 -------------
 
+ - TODO: handle errors properly (drop all panics from rproxy)
  - TODO: authentication
    - authenticate clients in proxy
    - read Redis password from config file
