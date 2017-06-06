@@ -12,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	resp "redisgreen.net/resp"
 )
 
 ////////////////////////////////////////
@@ -119,13 +121,13 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 
 	// TODO: catch and log panics
 	defer cliConn.Close()
-	cliReader := NewReader(bufio.NewReader(cliConn))
+	cliReader := resp.NewReader(bufio.NewReader(cliConn))
 	cliWriter := bufio.NewWriter(cliConn)
 
 	uplinkAddr := ""
 
 	var uplinkConn net.Conn
-	var uplinkReader *RESPReader
+	var uplinkReader *resp.RESPReader
 	var uplinkWriter *bufio.Writer
 
 	defer func() {
@@ -154,7 +156,7 @@ func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 				if err != nil {
 					return nil, err
 				}
-				uplinkReader = NewReader(bufio.NewReader(uplinkConn))
+				uplinkReader = resp.NewReader(bufio.NewReader(uplinkConn))
 				uplinkWriter = bufio.NewWriter(uplinkConn)
 			}
 

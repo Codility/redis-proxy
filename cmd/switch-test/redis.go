@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.codility.net/marcink/redis-proxy/rproxy"
+	resp "redisgreen.net/resp"
 )
 
 type Redis struct {
@@ -73,7 +73,7 @@ func (r *Redis) SlaveOf(master *Redis) {
 		panic(err)
 	}
 
-	reader := rproxy.NewReader(bufio.NewReader(conn))
+	reader := resp.NewReader(bufio.NewReader(conn))
 	writer := bufio.NewWriter(conn)
 
 	if master == nil {
