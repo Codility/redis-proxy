@@ -21,7 +21,6 @@ type ProxyController struct {
 	releasePermissionChannel chan struct{}
 	infoChannel              chan chan *ControllerInfo
 	commandChannel           chan int
-	proxy                    *RedisProxy
 }
 
 func NewProxyController() *ProxyController {
@@ -32,7 +31,7 @@ func NewProxyController() *ProxyController {
 		commandChannel:           make(chan int)}
 }
 
-func (controller *ProxyController) run() {
+func (controller *ProxyController) run(proxy *RedisProxy) {
 	activeRequests := 0
 	state := PROXY_RUNNING
 	requestPermissionChannel := controller.requestPermissionChannel
@@ -49,7 +48,7 @@ func (controller *ProxyController) run() {
 			}
 		case PROXY_RELOADING:
 			if activeRequests == 0 {
-				controller.proxy.ReloadConfig()
+				proxy.ReloadConfig()
 				state = PROXY_RUNNING
 				continue
 			}
@@ -70,7 +69,7 @@ func (controller *ProxyController) run() {
 			stateCh <- &ControllerInfo{
 				ActiveRequests: activeRequests,
 				State:          state,
-				Config:         controller.proxy.config}
+				Config:         proxy.config}
 
 		case cmd := <-controller.commandChannel:
 			switch cmd {

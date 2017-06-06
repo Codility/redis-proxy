@@ -54,8 +54,6 @@ func NewRedisProxy(config_file string) (*RedisProxy, error) {
 		config_file: config_file,
 		config:      config,
 		controller:  NewProxyController()}
-	// TODO: clean this up when getting rid of circular dep
-	proxy.controller.proxy = proxy
 	return proxy, nil
 }
 
@@ -68,7 +66,7 @@ func (proxy *RedisProxy) Run() {
 	log.Println("Listening on", proxy.config.ListenOn)
 
 	go proxy.watchSignals()
-	go proxy.controller.run()
+	go proxy.controller.run(proxy) // TODO: clean this up when getting rid of circular dep
 	go proxy.publishAdminInterface()
 
 	for {
