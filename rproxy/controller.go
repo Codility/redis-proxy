@@ -17,8 +17,8 @@ const (
 )
 
 type ProxyController struct {
-	requestPermissionChannel chan chan bool
-	releasePermissionChannel chan bool
+	requestPermissionChannel chan chan struct{}
+	releasePermissionChannel chan struct{}
 	infoChannel              chan chan *ControllerInfo
 	commandChannel           chan int
 	proxy                    *RedisProxy
@@ -26,8 +26,8 @@ type ProxyController struct {
 
 func NewProxyController() *ProxyController {
 	return &ProxyController{
-		requestPermissionChannel: make(chan chan bool),
-		releasePermissionChannel: make(chan bool), // TODO: buffer responses?
+		requestPermissionChannel: make(chan chan struct{}),
+		releasePermissionChannel: make(chan struct{}), // TODO: buffer responses?
 		infoChannel:              make(chan chan *ControllerInfo),
 		commandChannel:           make(chan int)}
 }
@@ -61,9 +61,9 @@ func (controller *ProxyController) run() {
 		// requestPermissionChannel is nil, so the controller
 		// will not receive any requests for permission.
 		case permCh := <-requestPermissionChannel:
-			permCh <- true
+			permCh <- struct{}{}
 			activeRequests++
-		case _ = <-controller.releasePermissionChannel:
+		case <-controller.releasePermissionChannel:
 			activeRequests--
 
 		case stateCh := <-controller.infoChannel:
@@ -88,13 +88,13 @@ func (controller *ProxyController) run() {
 }
 
 func (controller *ProxyController) enterExecution() {
-	ch := make(chan bool)
+	ch := make(chan struct{})
 	controller.requestPermissionChannel <- ch
 	<-ch
 }
 
 func (controller *ProxyController) leaveExecution() {
-	controller.releasePermissionChannel <- true
+	controller.releasePermissionChannel <- struct{}{}
 }
 
 func (controller *ProxyController) ExecuteCall(block func() ([]byte, error)) ([]byte, error) {
