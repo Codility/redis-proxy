@@ -12,7 +12,6 @@ const (
 	PROXY_RELOADING
 
 	CMD_PAUSE = iota
-	CMD_PAUSE_AND_WAIT
 	CMD_UNPAUSE
 	CMD_RELOAD
 )
@@ -76,8 +75,6 @@ func (controller *ProxyController) run() {
 		case cmd := <-controller.commandChannel:
 			switch cmd {
 			case CMD_PAUSE:
-				state = PROXY_PAUSING
-			case CMD_PAUSE_AND_WAIT:
 				state = PROXY_PAUSING
 			case CMD_UNPAUSE:
 				state = PROXY_RUNNING
