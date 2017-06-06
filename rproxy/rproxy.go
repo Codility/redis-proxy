@@ -57,10 +57,10 @@ func NewRedisProxy(config_file string) (*RedisProxy, error) {
 	return proxy, nil
 }
 
-func (proxy *RedisProxy) Run() {
+func (proxy *RedisProxy) Run() error {
 	listener, err := net.Listen("tcp", proxy.config.ListenOn)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	log.Println("Listening on", proxy.config.ListenOn)
@@ -72,7 +72,7 @@ func (proxy *RedisProxy) Run() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			panic(err)
+			return err
 		}
 		go proxy.handleClient(conn)
 	}
@@ -117,7 +117,6 @@ func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
 func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
 	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
-	// TODO: catch and log panics
 	defer cliConn.Close()
 	cliReader := resp.NewReader(bufio.NewReader(cliConn))
 	cliWriter := bufio.NewWriter(cliConn)

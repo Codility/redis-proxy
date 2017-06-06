@@ -92,7 +92,6 @@ func (proxy *RedisProxy) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
-
 	var err error
 	statusTemplate, err = template.New("status").Parse(statusHtml)
 	if err != nil {
