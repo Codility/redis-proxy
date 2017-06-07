@@ -96,7 +96,7 @@ func (controller *ProxyController) leaveExecution() {
 	controller.releasePermissionChannel <- struct{}{}
 }
 
-func (controller *ProxyController) ExecuteCall(block func() ([]byte, error)) ([]byte, error) {
+func (controller *ProxyController) CallUplink(block func() (*RespMsg, error)) (*RespMsg, error) {
 	controller.enterExecution()
 	defer controller.leaveExecution()
 

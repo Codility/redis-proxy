@@ -20,6 +20,10 @@ type RespConn struct {
 	readTimeLimitMs int64
 }
 
+type RespMsg struct {
+	data []byte
+}
+
 func NewRespConn(rawConn net.Conn, readTimeLimitMs int64, log bool) *RespConn {
 	return &RespConn{
 		raw:    rawConn,
@@ -38,18 +42,18 @@ func RespDial(proto, addr string, readTimeLimitMs int64, log bool) (*RespConn, e
 	}
 }
 
-func (rc *RespConn) Write(data []byte) (int, error) {
+func (rc *RespConn) WriteMsg(msg *RespMsg) (int, error) {
 	if rc.log {
-		rc.logMessage(false, data)
+		rc.logMessage(false, msg.data)
 	}
-	res, err := rc.writer.Write(data)
+	res, err := rc.writer.Write(msg.data)
 	if err == nil {
 		rc.writer.Flush()
 	}
 	return res, err
 }
 
-func (rc *RespConn) ReadObject() ([]byte, error) {
+func (rc *RespConn) ReadMsg() (*RespMsg, error) {
 	if rc.readTimeLimitMs > 0 {
 		rc.raw.SetReadDeadline(time.Now().Add(time.Duration(rc.readTimeLimitMs) * time.Millisecond))
 	}
@@ -61,7 +65,7 @@ func (rc *RespConn) ReadObject() ([]byte, error) {
 			rc.logMessage(true, res)
 		}
 	}
-	return res, err
+	return &RespMsg{res}, err
 }
 
 func (rc *RespConn) Close() error {
@@ -73,13 +77,13 @@ func (rc *RespConn) RemoteAddr() net.Addr {
 	return rc.raw.RemoteAddr()
 }
 
-func (rc *RespConn) logMessage(inbound bool, msg []byte) {
+func (rc *RespConn) logMessage(inbound bool, data []byte) {
 	dirStr := "<"
 	if inbound {
 		dirStr = ">"
 	}
 
-	msgStr := string(msg)
+	msgStr := string(data)
 	msgStr = strings.Replace(msgStr, "\n", "\\n", -1)
 	msgStr = strings.Replace(msgStr, "\r", "\\r", -1)
 

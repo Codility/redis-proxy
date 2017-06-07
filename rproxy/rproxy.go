@@ -123,13 +123,13 @@ func (proxy *RedisProxy) handleClient(cliConn *RespConn) {
 	}()
 
 	for {
-		req, err := cliConn.ReadObject()
+		req, err := cliConn.ReadMsg()
 		if err != nil {
 			log.Printf("Read error: %v\n", err)
 			return
 		}
 
-		resp, err := proxy.controller.ExecuteCall(func() ([]byte, error) {
+		res, err := proxy.controller.CallUplink(func() (*RespMsg, error) {
 			currUplinkAddr := proxy.config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr
@@ -145,14 +145,17 @@ func (proxy *RedisProxy) handleClient(cliConn *RespConn) {
 				}
 			}
 
-			uplinkConn.Write(req)
-			return uplinkConn.ReadObject()
+			_, err := uplinkConn.WriteMsg(req)
+			if err != nil {
+				return nil, err
+			}
+			return uplinkConn.ReadMsg()
 		})
 		if err != nil {
 			log.Printf("Error: %v\n", err)
 			return
 		}
 
-		cliConn.Write(resp)
+		cliConn.WriteMsg(res)
 	}
 }
