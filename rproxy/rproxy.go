@@ -1,7 +1,6 @@
 package rproxy
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -9,11 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
-	"time"
-
-	resp "redisgreen.net/resp"
 )
 
 ////////////////////////////////////////
@@ -74,7 +69,7 @@ func (proxy *RedisProxy) Run() error {
 		if err != nil {
 			return err
 		}
-		go proxy.handleClient(conn)
+		go proxy.handleClient(NewRespConn(conn, 0, proxy.config.LogMessages))
 	}
 }
 
@@ -114,78 +109,50 @@ func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
 	return nil
 }
 
-func (proxy *RedisProxy) handleClient(cliConn net.Conn) {
+func (proxy *RedisProxy) handleClient(cliConn *RespConn) {
 	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
-	defer cliConn.Close()
-	cliReader := resp.NewReader(bufio.NewReader(cliConn))
-	cliWriter := bufio.NewWriter(cliConn)
-
 	uplinkAddr := ""
-
-	var uplinkConn net.Conn
-	var uplinkReader *resp.RESPReader
-	var uplinkWriter *bufio.Writer
+	var uplinkConn *RespConn
 
 	defer func() {
+		cliConn.Close()
 		if uplinkConn != nil {
 			uplinkConn.Close()
 		}
 	}()
 
 	for {
-		req, err := cliReader.ReadObject()
+		req, err := cliConn.ReadObject()
 		if err != nil {
 			log.Printf("Read error: %v\n", err)
 			return
 		}
-		proxy.LogMessage(cliConn.RemoteAddr(), true, req)
 
 		resp, err := proxy.controller.ExecuteCall(func() ([]byte, error) {
 			currUplinkAddr := proxy.config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr
-				log.Println("Dialing", uplinkAddr)
 				if uplinkConn != nil {
 					uplinkConn.Close()
 				}
-				uplinkConn, err = net.Dial("tcp", uplinkAddr)
+				uplinkConn, err = RespDial("tcp", uplinkAddr,
+					proxy.config.ReadTimeLimitMs,
+					proxy.config.LogMessages,
+				)
 				if err != nil {
 					return nil, err
 				}
-				uplinkReader = resp.NewReader(bufio.NewReader(uplinkConn))
-				uplinkWriter = bufio.NewWriter(uplinkConn)
 			}
 
-			uplinkWriter.Write(req)
-			uplinkWriter.Flush()
-
-			uplinkConn.SetReadDeadline(time.Now().Add(time.Duration(proxy.config.ReadTimeLimitMs) * time.Millisecond))
-			return uplinkReader.ReadObject()
+			uplinkConn.Write(req)
+			return uplinkConn.ReadObject()
 		})
 		if err != nil {
 			log.Printf("Error: %v\n", err)
 			return
 		}
-		proxy.LogMessage(cliConn.RemoteAddr(), false, resp)
 
-		cliWriter.Write(resp)
-		cliWriter.Flush()
+		cliConn.Write(resp)
 	}
-}
-
-func (proxy *RedisProxy) LogMessage(addr net.Addr, inbound bool, msg []byte) {
-	if !proxy.config.LogMessages {
-		return
-	}
-	dirStr := "<"
-	if inbound {
-		dirStr = ">"
-	}
-
-	msgStr := string(msg)
-	msgStr = strings.Replace(msgStr, "\n", "\\n", -1)
-	msgStr = strings.Replace(msgStr, "\r", "\\r", -1)
-
-	log.Printf("%s %s %s", addr, dirStr, msgStr)
 }
