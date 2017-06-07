@@ -1,0 +1,37 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/kr/pretty",
+			"repository": "https://github.com/kr/pretty",
+			"vcs": "git",
+			"revision": "cfb55aafdaf3ec08f0db22699ab822c50091b1c4",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/kr/pty",
+			"repository": "https://github.com/kr/pty",
+			"vcs": "git",
+			"revision": "2c10821df3c3cf905230d078702dfbe9404c9b23",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/kr/text",
+			"repository": "https://github.com/kr/text",
+			"vcs": "git",
+			"revision": "7cafcd837844e784b526369c9bce262804aebc60",
+			"branch": "main",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/stvp/assert",
+			"repository": "https://github.com/stvp/assert",
+			"vcs": "git",
+			"revision": "488e5f84a1e0e947e909f1f4f1e851502f61972d",
+			"branch": "master",
+			"notests": true
+		}
+	]
+}
