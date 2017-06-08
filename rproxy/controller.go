@@ -137,11 +137,10 @@ func (controller *ProxyController) PauseAndWait() {
 	// poll
 	controller.channels.command <- CMD_PAUSE
 	for {
-		info := controller.GetInfo()
-		if info.ActiveRequests == 0 {
+		if controller.GetInfo().ActiveRequests == 0 {
 			return
 		}
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -159,7 +158,7 @@ func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 		if controller.GetInfo().State == PROXY_RUNNING {
 			return
 		}
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -169,7 +168,7 @@ func (controller *ProxyController) Stop() {
 		if controller.channels == nil {
 			return
 		}
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
