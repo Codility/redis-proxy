@@ -155,6 +155,12 @@ func (controller *ProxyController) Reload() {
 
 func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 	go controller.run(ch)
+	for {
+		if controller.GetInfo().State == PROXY_RUNNING {
+			return
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 }
 
 func (controller *ProxyController) Stop() {
