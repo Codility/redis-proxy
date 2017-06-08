@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func (proxy *RedisProxy) publishAdminInterface() {
+func (proxy *Proxy) publishAdminInterface() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/cmd/", proxy.handleHTTPCmd)
 	mux.HandleFunc("/status.json", func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +32,7 @@ var statusTemplate *template.Template
 const statusHtml = `<!DOCTYPE html>
 <html>
 	<head>
-		<title>Redis Proxy status</title>
+		<title>Proxy status</title>
 	</head>
 	<body>
 		<pre>
@@ -49,7 +49,7 @@ const statusHtml = `<!DOCTYPE html>
 </html>
 `
 
-func (proxy *RedisProxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
+func (proxy *Proxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
 	st := proxy.controller.GetInfo()
 	info := map[string]interface{}{
 		"activeRequests": st.ActiveRequests,
@@ -69,7 +69,7 @@ func (proxy *RedisProxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (proxy *RedisProxy) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
+func (proxy *Proxy) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		r.ParseForm()
 		cmd := r.Form["cmd"][0]

@@ -9,30 +9,30 @@ import (
 	"syscall"
 )
 
-type RedisProxyConfigHolder interface {
+type ProxyConfigHolder interface {
 	ReloadConfig()
-	GetConfig() *RedisProxyConfig
+	GetConfig() *ProxyConfig
 }
 
-type RedisProxy struct {
+type Proxy struct {
 	config_file string
-	config      *RedisProxyConfig
+	config      *ProxyConfig
 	controller  *ProxyController
 }
 
-func NewRedisProxy(config_file string) (*RedisProxy, error) {
+func NewProxy(config_file string) (*Proxy, error) {
 	config, err := LoadConfig(config_file)
 	if err != nil {
 		return nil, err
 	}
-	proxy := &RedisProxy{
+	proxy := &Proxy{
 		config_file: config_file,
 		config:      config,
 		controller:  NewProxyController()}
 	return proxy, nil
 }
 
-func (proxy *RedisProxy) Run() error {
+func (proxy *Proxy) Run() error {
 	listener, err := net.Listen("tcp", proxy.config.ListenOn)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (proxy *RedisProxy) Run() error {
 	}
 }
 
-func (proxy *RedisProxy) ReloadConfig() {
+func (proxy *Proxy) ReloadConfig() {
 	newConfig, err := LoadConfig(proxy.config_file)
 	if err != nil {
 		log.Printf("Got an error while loading %s: %s.  Keeping old config.", proxy.config_file, err)
@@ -67,11 +67,11 @@ func (proxy *RedisProxy) ReloadConfig() {
 	proxy.config = newConfig
 }
 
-func (proxy *RedisProxy) GetConfig() *RedisProxyConfig {
+func (proxy *Proxy) GetConfig() *ProxyConfig {
 	return proxy.config
 }
 
-func (proxy *RedisProxy) watchSignals() {
+func (proxy *Proxy) watchSignals() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 
@@ -82,7 +82,7 @@ func (proxy *RedisProxy) watchSignals() {
 	}
 }
 
-func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
+func (proxy *Proxy) verifyNewConfig(newConfig *ProxyConfig) error {
 	config := proxy.config
 	if config.ListenOn != newConfig.ListenOn {
 		return errors.New("New config must have the same listen_on address as the old one.")
@@ -93,7 +93,7 @@ func (proxy *RedisProxy) verifyNewConfig(newConfig *RedisProxyConfig) error {
 	return nil
 }
 
-func (proxy *RedisProxy) handleClient(cliConn *RespConn) {
+func (proxy *Proxy) handleClient(cliConn *RespConn) {
 	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
 	uplinkAddr := ""

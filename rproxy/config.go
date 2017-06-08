@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 )
 
-type RedisProxyConfig struct {
+type ProxyConfig struct {
 	UplinkAddr      string `json:"uplink_addr"`
 	ListenOn        string `json:"listen_on"`
 	AdminOn         string `json:"admin_on"`
@@ -13,11 +13,11 @@ type RedisProxyConfig struct {
 	LogMessages     bool   `json:"log_messages"`
 }
 
-func LoadConfig(fname string) (*RedisProxyConfig, error) {
+func LoadConfig(fname string) (*ProxyConfig, error) {
 	configJson, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
 	}
-	var config RedisProxyConfig
+	var config ProxyConfig
 	return &config, json.Unmarshal(configJson, &config)
 }

@@ -4,10 +4,10 @@ package rproxy
 // TestConfigHolder
 
 type TestConfigHolder struct {
-	config *RedisProxyConfig
+	config *ProxyConfig
 }
 
-func (ch *TestConfigHolder) GetConfig() *RedisProxyConfig {
+func (ch *TestConfigHolder) GetConfig() *ProxyConfig {
 	return ch.config
 }
 

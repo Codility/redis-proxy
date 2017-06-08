@@ -12,7 +12,7 @@ var (
 
 func main() {
 	flag.Parse()
-	proxy, err := rproxy.NewRedisProxy(*config_file)
+	proxy, err := rproxy.NewProxy(*config_file)
 	if err != nil {
 		panic(err)
 	}

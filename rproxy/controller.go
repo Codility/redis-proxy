@@ -36,7 +36,7 @@ func NewProxyController() *ProxyController {
 	return &ProxyController{}
 }
 
-func (controller *ProxyController) run(confHolder RedisProxyConfigHolder) {
+func (controller *ProxyController) run(confHolder ProxyConfigHolder) {
 	controller.channels = &ProxyControllerChannels{
 		requestPermission: make(chan chan struct{}, MAX_CONNECTIONS),
 		releasePermission: make(chan struct{}, MAX_CONNECTIONS),
@@ -153,7 +153,7 @@ func (controller *ProxyController) Reload() {
 	controller.channels.command <- CMD_RELOAD
 }
 
-func (controller *ProxyController) Start(ch RedisProxyConfigHolder) {
+func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 	go controller.run(ch)
 }
 
@@ -174,7 +174,7 @@ type ControllerInfo struct {
 	ActiveRequests  int
 	WaitingRequests int
 	State           int
-	Config          *RedisProxyConfig
+	Config          *ProxyConfig
 }
 
 func (ci *ControllerInfo) StateStr() string {
