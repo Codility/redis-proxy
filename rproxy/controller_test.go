@@ -1,6 +1,7 @@
 package rproxy
 
 import (
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ func waitUntil(t *testing.T, expr func() bool) {
 		}
 		time.Sleep(250 * time.Microsecond)
 	}
+	debug.PrintStack()
 	t.Fatalf("Expression still false after %v", duration)
 }
 
@@ -50,12 +52,12 @@ func TestControllerPause(t *testing.T) {
 	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_RUNNING })
 
 	// in PROXY_RUNNING: requests are executed immediately
-	r0 := NewTestRequest(contr)
+	r0 := NewTestRequest(contr, func() {})
 	go r0.Do()
 	waitUntil(t, func() bool { return r0.done })
 
 	// in PROXY_PAUSED: requests are queued
-	r1 := NewTestRequest(contr)
+	r1 := NewTestRequest(contr, func() {})
 	contr.PauseAndWait() // --------------- pause starts
 	go r1.Do()
 	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 1 })
@@ -82,9 +84,9 @@ func TestControllerAllowsParallelRequests(t *testing.T) {
 	go NewTestRequest(contr, func() { waiting += 1; <-finish; waiting -= 1 }).Do()
 	go NewTestRequest(contr, func() { waiting += 1; <-finish; waiting -= 1 }).Do()
 
-	waitUntil(t, func() bool { waiting == 2 })
+	waitUntil(t, func() bool { return waiting == 2 })
 	finish <- struct{}{}
 	finish <- struct{}{}
 
-	waitUntil(t, func() bool { waiting == 0 })
+	waitUntil(t, func() bool { return waiting == 0 })
 }

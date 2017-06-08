@@ -28,6 +28,7 @@ func NewTestRequest(contr *ProxyController, block func()) *TestRequest {
 
 func (r *TestRequest) Do() {
 	r.contr.CallUplink(func() (*RespMsg, error) {
+		r.block()
 		return nil, nil
 	})
 	r.done = true
