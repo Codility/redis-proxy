@@ -23,7 +23,9 @@ func (ch *TestConfigHolder) ReloadConfig() {}
 ////////////////////////////////////////
 // Tests
 
-func waitUntil(t *testing.T, expr func() bool, duration time.Duration) {
+func waitUntil(t *testing.T, expr func() bool) {
+	const duration = time.Second
+
 	deadline := time.Now().Add(duration)
 	for time.Now().Before(deadline) {
 		if expr() {
@@ -48,11 +50,51 @@ func TestControllerStartStop(t *testing.T) {
 
 	waitUntil(t, func() bool {
 		return contr.GetInfo().State == PROXY_RUNNING
-	}, time.Second)
+	})
 	assert.False(t, runDone)
 
 	contr.Stop()
 
 	assert.Equal(t, contr.GetInfo().State, PROXY_STOPPED)
 	assert.True(t, runDone)
+}
+
+func TestControllerPause(t *testing.T) {
+	contr := NewProxyController()
+	contr.Start(&TestConfigHolder{})
+	defer contr.Stop()
+	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_RUNNING })
+
+	r0 := NewTestRequest(contr)
+	go r0.Do()
+	waitUntil(t, func() bool { return r0.done })
+
+	r1 := NewTestRequest(contr)
+	contr.PauseAndWait() // --------------- pause starts
+	go r1.Do()
+	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 1 })
+
+	time.Sleep(250 * time.Millisecond)
+	assert.Equal(t, contr.GetInfo().WaitingRequests, 1)
+	assert.False(t, r1.done)
+
+	contr.Unpause() // --------------- pause ends
+	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 0 })
+	waitUntil(t, func() bool { return r1.done })
+}
+
+type TestRequest struct {
+	contr *ProxyController
+	done  bool
+}
+
+func NewTestRequest(contr *ProxyController) *TestRequest {
+	return &TestRequest{contr: contr}
+}
+
+func (r *TestRequest) Do() {
+	r.contr.CallUplink(func() (*RespMsg, error) {
+		return nil, nil
+	})
+	r.done = true
 }

@@ -17,6 +17,8 @@ const (
 	CMD_UNPAUSE
 	CMD_RELOAD
 	CMD_STOP
+
+	MAX_CONNECTIONS = 1000
 )
 
 type ProxyControllerChannels struct {
@@ -36,8 +38,8 @@ func NewProxyController() *ProxyController {
 
 func (controller *ProxyController) run(confHolder RedisProxyConfigHolder) {
 	controller.channels = &ProxyControllerChannels{
-		requestPermission: make(chan chan struct{}),
-		releasePermission: make(chan struct{}), // TODO: buffer responses?
+		requestPermission: make(chan chan struct{}, MAX_CONNECTIONS),
+		releasePermission: make(chan struct{}, MAX_CONNECTIONS),
 		info:              make(chan chan *ControllerInfo),
 		command:           make(chan int),
 	}
@@ -77,9 +79,10 @@ func (controller *ProxyController) run(confHolder RedisProxyConfigHolder) {
 
 		case stateCh := <-controller.channels.info:
 			stateCh <- &ControllerInfo{
-				ActiveRequests: activeRequests,
-				State:          state,
-				Config:         confHolder.GetConfig()}
+				ActiveRequests:  activeRequests,
+				WaitingRequests: len(controller.channels.requestPermission),
+				State:           state,
+				Config:          confHolder.GetConfig()}
 
 		case cmd := <-controller.channels.command:
 			switch cmd {
@@ -168,9 +171,10 @@ func (controller *ProxyController) Stop() {
 // ControllerInfo
 
 type ControllerInfo struct {
-	ActiveRequests int
-	State          int
-	Config         *RedisProxyConfig
+	ActiveRequests  int
+	WaitingRequests int
+	State           int
+	Config          *RedisProxyConfig
 }
 
 func (ci *ControllerInfo) StateStr() string {
