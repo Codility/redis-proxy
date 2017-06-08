@@ -54,7 +54,7 @@ func (proxy *Proxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, for
 	info := map[string]interface{}{
 		"activeRequests": st.ActiveRequests,
 		"config":         st.Config,
-		"stateStr":       st.StateStr(),
+		"stateStr":       string(st.State),
 	}
 	infoBytes, _ := json.MarshalIndent(info, "", "    ")
 
