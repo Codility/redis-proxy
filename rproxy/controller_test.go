@@ -68,16 +68,16 @@ func TestControllerAllowsParallelRequests(t *testing.T) {
 	defer contr.Stop()
 
 	finish := make(chan struct{})
-	waiting := 0
+	executing := 0
 
-	go NewTestRequest(contr, func() { waiting += 1; <-finish; waiting -= 1 }).Do()
-	go NewTestRequest(contr, func() { waiting += 1; <-finish; waiting -= 1 }).Do()
+	go NewTestRequest(contr, func() { executing += 1; <-finish; executing -= 1 }).Do()
+	go NewTestRequest(contr, func() { executing += 1; <-finish; executing -= 1 }).Do()
 
-	waitUntil(t, func() bool { return waiting == 2 })
+	waitUntil(t, func() bool { return executing == 2 })
 	finish <- struct{}{}
 	finish <- struct{}{}
 
-	waitUntil(t, func() bool { return waiting == 0 })
+	waitUntil(t, func() bool { return executing == 0 })
 }
 
 func TestControllerPauseDuringActiveRequests(t *testing.T) {
@@ -87,26 +87,41 @@ func TestControllerPauseDuringActiveRequests(t *testing.T) {
 
 	finish := make(chan struct{})
 
-	go NewTestRequest(contr, func() { <-finish }).Do()
-	waitUntil(t, func() bool { return contr.GetInfo().ActiveRequests == 1 })
+	reqStartedBeforePauseWorking := false
+	reqStartedBeforePause := NewTestRequest(contr, func() {
+		reqStartedBeforePauseWorking = true
+		<-finish
+		reqStartedBeforePauseWorking = false
+	})
+
+	go reqStartedBeforePause.Do()
+	waitUntil(t, func() bool { return reqStartedBeforePauseWorking })
+	assert.Equal(t, contr.GetInfo().ActiveRequests, 1)
 
 	contr.Pause()
-	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_PAUSING })
 
-	go NewTestRequest(contr, func() { <-finish }).Do()
+	reqStartedDuringPauseWorking := false
+	reqStartedDuringPause := NewTestRequest(contr, func() {
+		reqStartedDuringPauseWorking = true
+		<-finish
+		reqStartedDuringPauseWorking = false
+	})
+	go reqStartedDuringPause.Do()
 	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 1 })
 
-	time.Sleep(250 * time.Millisecond)
 	assert.Equal(t, contr.GetInfo().ActiveRequests, 1)
 	assert.Equal(t, contr.GetInfo().State, PROXY_PAUSING)
+	assert.True(t, reqStartedBeforePauseWorking)
 
 	finish <- struct{}{}
 	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_PAUSED })
-	time.Sleep(250 * time.Millisecond)
 	assert.Equal(t, contr.GetInfo().ActiveRequests, 0)
 	assert.Equal(t, contr.GetInfo().WaitingRequests, 1)
+	assert.False(t, reqStartedBeforePauseWorking)
+	assert.False(t, reqStartedDuringPauseWorking)
 
 	contr.Unpause()
 	waitUntil(t, func() bool { return contr.GetInfo().ActiveRequests == 1 })
 	assert.Equal(t, contr.GetInfo().WaitingRequests, 0)
+	waitUntil(t, func() bool { return reqStartedDuringPauseWorking })
 }

@@ -4,14 +4,19 @@ package rproxy
 // TestConfigHolder
 
 type TestConfigHolder struct {
-	config *ProxyConfig
+	config              *ProxyConfig
+	GetConfigCallCnt    int
+	ReloadConfigCallCnt int
 }
 
 func (ch *TestConfigHolder) GetConfig() *ProxyConfig {
+	ch.GetConfigCallCnt += 1
 	return ch.config
 }
 
-func (ch *TestConfigHolder) ReloadConfig() {}
+func (ch *TestConfigHolder) ReloadConfig() {
+	ch.ReloadConfigCallCnt += 1
+}
 
 ////////////////////////////////////////
 // TestRequest
