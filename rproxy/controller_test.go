@@ -7,22 +7,6 @@ import (
 	"github.com/stvp/assert"
 )
 
-////////////////////////////////////////
-// TestConfigHolder
-
-type TestConfigHolder struct {
-	config *RedisProxyConfig
-}
-
-func (ch *TestConfigHolder) GetConfig() *RedisProxyConfig {
-	return ch.config
-}
-
-func (ch *TestConfigHolder) ReloadConfig() {}
-
-////////////////////////////////////////
-// Tests
-
 func waitUntil(t *testing.T, expr func() bool) {
 	const duration = time.Second
 
@@ -81,20 +65,4 @@ func TestControllerPause(t *testing.T) {
 	contr.Unpause() // --------------- pause ends
 	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 0 })
 	waitUntil(t, func() bool { return r1.done })
-}
-
-type TestRequest struct {
-	contr *ProxyController
-	done  bool
-}
-
-func NewTestRequest(contr *ProxyController) *TestRequest {
-	return &TestRequest{contr: contr}
-}
-
-func (r *TestRequest) Do() {
-	r.contr.CallUplink(func() (*RespMsg, error) {
-		return nil, nil
-	})
-	r.done = true
 }
