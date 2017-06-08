@@ -125,3 +125,26 @@ func TestControllerPauseDuringActiveRequests(t *testing.T) {
 	assert.Equal(t, contr.GetInfo().WaitingRequests, 0)
 	waitUntil(t, func() bool { return reqStartedDuringPauseWorking })
 }
+
+func TestControllerReloadWaitsForPause(t *testing.T) {
+	contr := NewProxyController()
+	ch := &TestConfigHolder{}
+	contr.Start(ch)
+	defer contr.Stop()
+
+	finish := make(chan struct{})
+	executing := 0
+
+	go NewTestRequest(contr, func() { executing += 1; <-finish; executing -= 1 }).Do()
+	waitUntil(t, func() bool { return executing == 1 })
+
+	contr.Reload()
+	assert.Equal(t, contr.GetInfo().State, PROXY_RELOADING)
+	assert.Equal(t, ch.ReloadConfigCallCnt, 0)
+
+	finish <- struct{}{}
+
+	waitUntil(t, func() bool { return executing == 0 })
+	assert.Equal(t, contr.GetInfo().State, PROXY_RUNNING)
+	assert.Equal(t, ch.ReloadConfigCallCnt, 1)
+}
