@@ -1,6 +1,9 @@
 package rproxy
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 ////////////////////////////////////////
 // ProxyController interface
@@ -41,7 +44,7 @@ func (state ControllerState) String() string {
 	case PROXY_STOPPING:
 		return "stopping"
 	default:
-		return "unknown"
+		return "unknown:" + strconv.Itoa(int(state))
 	}
 }
 
