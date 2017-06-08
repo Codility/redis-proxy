@@ -9,6 +9,11 @@ import (
 	"syscall"
 )
 
+type RedisProxyConfigHolder interface {
+	ReloadConfig()
+	GetConfig() *RedisProxyConfig
+}
+
 type RedisProxy struct {
 	config_file string
 	config      *RedisProxyConfig
@@ -35,8 +40,8 @@ func (proxy *RedisProxy) Run() error {
 
 	log.Println("Listening on", proxy.config.ListenOn)
 
+	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
 	go proxy.watchSignals()
-	go proxy.controller.run(proxy) // TODO: clean this up when getting rid of circular dep
 	go proxy.publishAdminInterface()
 
 	for {
@@ -60,6 +65,10 @@ func (proxy *RedisProxy) ReloadConfig() {
 		return
 	}
 	proxy.config = newConfig
+}
+
+func (proxy *RedisProxy) GetConfig() *RedisProxyConfig {
+	return proxy.config
 }
 
 func (proxy *RedisProxy) watchSignals() {
