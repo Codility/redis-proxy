@@ -11,6 +11,7 @@ const (
 	PROXY_PAUSING
 	PROXY_PAUSED
 	PROXY_RELOADING
+	PROXY_STOPPING
 
 	CMD_PAUSE = ControllerCommand(iota)
 	CMD_UNPAUSE
@@ -37,6 +38,8 @@ func (state ControllerState) String() string {
 		return "paused"
 	case PROXY_RELOADING:
 		return "reloading"
+	case PROXY_STOPPING:
+		return "stopping"
 	default:
 		return "unknown"
 	}
@@ -65,18 +68,18 @@ func (controller *ProxyController) GetInfo() *ControllerInfo {
 		return &ControllerInfo{State: PROXY_STOPPED}
 	}
 	ch := make(chan *ControllerInfo)
-	controller.proc.info <- ch
+	controller.proc.channels.info <- ch
 	return <-ch
 }
 
 func (controller *ProxyController) Pause() {
-	controller.proc.command <- CMD_PAUSE
+	controller.proc.channels.command <- CMD_PAUSE
 }
 
 func (controller *ProxyController) PauseAndWait() {
 	// TODO: push the state change instead of having the client
 	// poll
-	controller.proc.command <- CMD_PAUSE
+	controller.proc.channels.command <- CMD_PAUSE
 	for {
 		if controller.GetInfo().ActiveRequests == 0 {
 			return
@@ -86,11 +89,11 @@ func (controller *ProxyController) PauseAndWait() {
 }
 
 func (controller *ProxyController) Unpause() {
-	controller.proc.command <- CMD_UNPAUSE
+	controller.proc.channels.command <- CMD_UNPAUSE
 }
 
 func (controller *ProxyController) Reload() {
-	controller.proc.command <- CMD_RELOAD
+	controller.proc.channels.command <- CMD_RELOAD
 }
 
 func (controller *ProxyController) Start(ch ProxyConfigHolder) {
@@ -104,7 +107,7 @@ func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 }
 
 func (controller *ProxyController) Stop() {
-	controller.proc.command <- CMD_STOP
+	controller.proc.channels.command <- CMD_STOP
 	for {
 		if controller.proc == nil {
 			return
@@ -117,19 +120,19 @@ func (controller *ProxyController) Stop() {
 // ProxyController implementation
 
 func (controller *ProxyController) run(confHolder ProxyConfigHolder) {
-	controller.proc = NewProxyControllerProc()
+	controller.proc = NewProxyControllerProc(confHolder)
 	defer func() {
 		controller.proc = nil
 	}()
-	controller.proc.run(confHolder)
+	controller.proc.run()
 }
 
 func (controller *ProxyController) enterExecution() {
 	ch := make(chan struct{})
-	controller.proc.requestPermission <- ch
+	controller.proc.channels.requestPermission <- ch
 	<-ch
 }
 
 func (controller *ProxyController) leaveExecution() {
-	controller.proc.releasePermission <- struct{}{}
+	controller.proc.channels.releasePermission <- struct{}{}
 }
