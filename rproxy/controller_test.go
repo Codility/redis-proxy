@@ -49,10 +49,12 @@ func TestControllerPause(t *testing.T) {
 	defer contr.Stop()
 	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_RUNNING })
 
+	// in PROXY_RUNNING: requests are executed immediately
 	r0 := NewTestRequest(contr)
 	go r0.Do()
 	waitUntil(t, func() bool { return r0.done })
 
+	// in PROXY_PAUSED: requests are queued
 	r1 := NewTestRequest(contr)
 	contr.PauseAndWait() // --------------- pause starts
 	go r1.Do()
@@ -62,7 +64,27 @@ func TestControllerPause(t *testing.T) {
 	assert.Equal(t, contr.GetInfo().WaitingRequests, 1)
 	assert.False(t, r1.done)
 
+	// back to PROXY_RUNNING: queued requests get executed
 	contr.Unpause() // --------------- pause ends
 	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 0 })
 	waitUntil(t, func() bool { return r1.done })
+}
+
+func TestControllerAllowsParallelRequests(t *testing.T) {
+	contr := NewProxyController()
+	contr.Start(&TestConfigHolder{})
+	defer contr.Stop()
+	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_RUNNING })
+
+	finish := make(chan struct{})
+	waiting := 0
+
+	go NewTestRequest(contr, func() { waiting += 1; <-finish; waiting -= 1 }).Do()
+	go NewTestRequest(contr, func() { waiting += 1; <-finish; waiting -= 1 }).Do()
+
+	waitUntil(t, func() bool { waiting == 2 })
+	finish <- struct{}{}
+	finish <- struct{}{}
+
+	waitUntil(t, func() bool { waiting == 0 })
 }

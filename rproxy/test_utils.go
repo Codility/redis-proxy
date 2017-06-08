@@ -19,10 +19,11 @@ func (ch *TestConfigHolder) ReloadConfig() {}
 type TestRequest struct {
 	contr *ProxyController
 	done  bool
+	block func()
 }
 
-func NewTestRequest(contr *ProxyController) *TestRequest {
-	return &TestRequest{contr: contr}
+func NewTestRequest(contr *ProxyController, block func()) *TestRequest {
+	return &TestRequest{contr: contr, block: block}
 }
 
 func (r *TestRequest) Do() {
