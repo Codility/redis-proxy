@@ -13,11 +13,47 @@ type ProxyConfig struct {
 	LogMessages     bool   `json:"log_messages"`
 }
 
-func LoadConfig(fname string) (*ProxyConfig, error) {
-	configJson, err := ioutil.ReadFile(fname)
+type ConfigLoader interface {
+	Load() (*ProxyConfig, error)
+	String() string
+}
+
+////////////////////////////////////////
+// FileConfig
+
+type FileConfig struct {
+	fileName string
+}
+
+func NewFileConfig(name string) *FileConfig {
+	return &FileConfig{name}
+}
+
+func (f *FileConfig) Load() (*ProxyConfig, error) {
+	configJson, err := ioutil.ReadFile(f.fileName)
 	if err != nil {
 		return nil, err
 	}
 	var config ProxyConfig
 	return &config, json.Unmarshal(configJson, &config)
+}
+
+func (f *FileConfig) String() string {
+	return f.fileName
+}
+
+////////////////////////////////////////
+// ConstConfig
+
+type ConstConfig struct {
+	conf *ProxyConfig
+	err  error
+}
+
+func (c *ConstConfig) Load() (*ProxyConfig, error) {
+	return c.conf, c.err
+}
+
+func (c *ConstConfig) String() string {
+	return "<const config>"
 }

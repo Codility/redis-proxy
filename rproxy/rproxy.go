@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type ProxyConfigHolder interface {
@@ -15,48 +16,61 @@ type ProxyConfigHolder interface {
 }
 
 type Proxy struct {
-	config_file string
-	config      *ProxyConfig
-	controller  *ProxyController
+	configLoader ConfigLoader
+	config       *ProxyConfig
+	controller   *ProxyController
 }
 
-func NewProxy(config_file string) (*Proxy, error) {
-	config, err := LoadConfig(config_file)
+func NewProxy(cl ConfigLoader) (*Proxy, error) {
+	config, err := cl.Load()
 	if err != nil {
 		return nil, err
 	}
 	proxy := &Proxy{
-		config_file: config_file,
-		config:      config,
-		controller:  NewProxyController()}
+		configLoader: cl,
+		config:       config,
+		controller:   NewProxyController()}
 	return proxy, nil
 }
 
 func (proxy *Proxy) Run() error {
-	listener, err := net.Listen("tcp", proxy.config.ListenOn)
+	genListener, err := net.Listen("tcp", proxy.config.ListenOn)
 	if err != nil {
 		return err
 	}
+	defer genListener.Close()
+	listener := genListener.(*net.TCPListener)
 
-	log.Println("Listening on", proxy.config.ListenOn)
+	log.Println("Listening on", listener.Addr())
 
 	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
 	go proxy.watchSignals()
 	go proxy.publishAdminInterface()
 
-	for {
+	for proxy.controller.Alive() {
+		listener.SetDeadline(time.Now().Add(time.Second))
 		conn, err := listener.Accept()
 		if err != nil {
-			return err
+			if err, ok := err.(*net.OpError); ok && err.Timeout() {
+				// it was a timeout; continue the loop
+			} else {
+				return err
+			}
+		} else {
+			go proxy.handleClient(NewRespConn(conn, 0, proxy.config.LogMessages))
 		}
-		go proxy.handleClient(NewRespConn(conn, 0, proxy.config.LogMessages))
 	}
+	return nil
+}
+
+func (proxy *Proxy) Alive() bool {
+	return proxy.controller.Alive()
 }
 
 func (proxy *Proxy) ReloadConfig() {
-	newConfig, err := LoadConfig(proxy.config_file)
+	newConfig, err := proxy.configLoader.Load()
 	if err != nil {
-		log.Printf("Got an error while loading %s: %s.  Keeping old config.", proxy.config_file, err)
+		log.Printf("Got an error while loading %s: %s.  Keeping old config.", proxy, err)
 		return
 	}
 

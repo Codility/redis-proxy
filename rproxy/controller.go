@@ -119,6 +119,10 @@ func (controller *ProxyController) Stop() {
 	}
 }
 
+func (controller *ProxyController) Alive() bool {
+	return controller.proc != nil
+}
+
 ////////////////////////////////////////
 // ProxyController implementation
 
