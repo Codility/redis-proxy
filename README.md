@@ -17,6 +17,16 @@ Current state
  - TODO: switch-test: wait for replication to really catch up
  - TODO: move switchover logic to proxy (old proxy can handle the entire process)
 
+
+Possible optimizations
+----------------------
+
+ - Do not recreate the entire response in memory, pass it directly to
+   the client instead.
+ - Parse just enough of the message to figure out if it's one of
+   commands to handle (SELECT, AUTH), otherwise pass it directly to
+   uplink.
+
 Requirements
 ------------
 
