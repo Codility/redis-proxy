@@ -19,6 +19,7 @@ type Proxy struct {
 	configLoader ConfigLoader
 	config       *ProxyConfig
 	controller   *ProxyController
+	listenAddr   *net.Addr
 }
 
 func NewProxy(cl ConfigLoader) (*Proxy, error) {
@@ -41,7 +42,10 @@ func (proxy *Proxy) Run() error {
 	defer genListener.Close()
 	listener := genListener.(*net.TCPListener)
 
-	log.Println("Listening on", listener.Addr())
+	addr := listener.Addr()
+	proxy.listenAddr = &addr
+
+	log.Println("Listening on", proxy.ListenAddr())
 
 	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
 	go proxy.watchSignals()
@@ -51,11 +55,10 @@ func (proxy *Proxy) Run() error {
 		listener.SetDeadline(time.Now().Add(time.Second))
 		conn, err := listener.Accept()
 		if err != nil {
-			if err, ok := err.(*net.OpError); ok && err.Timeout() {
-				// it was a timeout; continue the loop
-			} else {
-				return err
+			if IsTimeout(err) {
+				continue
 			}
+			return err
 		} else {
 			go proxy.handleClient(NewRespConn(conn, 0, proxy.config.LogMessages))
 		}
@@ -65,6 +68,10 @@ func (proxy *Proxy) Run() error {
 
 func (proxy *Proxy) Alive() bool {
 	return proxy.controller.Alive()
+}
+
+func (proxy *Proxy) ListenAddr() net.Addr {
+	return *proxy.listenAddr
 }
 
 func (proxy *Proxy) ReloadConfig() {

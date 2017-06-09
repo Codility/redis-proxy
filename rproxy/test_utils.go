@@ -2,6 +2,7 @@ package rproxy
 
 import (
 	"net"
+	"sync"
 	"time"
 )
 
@@ -49,7 +50,9 @@ func (r *TestRequest) Do() {
 
 type FakeRedisServer struct {
 	listener *net.TCPListener
-	quit     chan struct{}
+
+	mu       sync.Mutex
+	shutdown bool
 }
 
 func NewFakeRedisServer() *FakeRedisServer {
@@ -67,6 +70,12 @@ func StartFakeRedisServer() *FakeRedisServer {
 	return srv
 }
 
+func (s *FakeRedisServer) IsShuttingDown() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.shutdown
+}
+
 func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 	var err error
 
@@ -80,29 +89,24 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 		startedChan <- struct{}{}
 	}
 
-	for {
-		select {
-		case <-s.quit:
-			return
-		default:
-		}
-
+	for !s.IsShuttingDown() {
 		s.listener.SetDeadline(time.Now().Add(time.Second))
 		conn, err := s.listener.AcceptTCP()
 		if err != nil {
-			if err, ok := err.(*net.OpError); ok && err.Timeout() {
-				// it was a timeout; continue the loop
-			} else {
-				panic(err)
+			if IsTimeout(err) {
+				continue
 			}
-		} else {
-			go s.handleConnection(conn)
+			panic(err)
 		}
+		go s.handleConnection(conn)
 	}
 }
 
 func (s *FakeRedisServer) Stop() {
-	s.quit <- struct{}{}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.shutdown = true
 	// Don't bother waiting for the server to actually close, it's
 	// just in tests anyway.
 }
@@ -112,7 +116,20 @@ func (s *FakeRedisServer) Addr() net.Addr {
 }
 
 func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
-	// TODO
+	rc := NewRespConn(conn, 100, false)
+	for !s.IsShuttingDown() {
+		_, err := rc.ReadMsg()
+		if err != nil {
+			if IsTimeout(err) {
+				continue
+			}
+			panic(err)
+		}
+		_, err = rc.WriteMsg(&RespMsg{[]byte("$4\r\nfake\r\n")})
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (s *FakeRedisServer) ReqCnt() int {

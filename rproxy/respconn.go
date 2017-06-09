@@ -20,10 +20,6 @@ type RespConn struct {
 	readTimeLimitMs int64
 }
 
-type RespMsg struct {
-	data []byte
-}
-
 func NewRespConn(rawConn net.Conn, readTimeLimitMs int64, log bool) *RespConn {
 	return &RespConn{
 		raw:    rawConn,
@@ -88,4 +84,15 @@ func (rc *RespConn) logMessage(inbound bool, data []byte) {
 	msgStr = strings.Replace(msgStr, "\r", "\\r", -1)
 
 	log.Printf("%s %s %s", rc.raw.RemoteAddr(), dirStr, msgStr)
+}
+
+////////////////////////////////////////
+// RespMsg
+
+type RespMsg struct {
+	data []byte
+}
+
+func (m *RespMsg) String() string {
+	return string(m.data)
 }
