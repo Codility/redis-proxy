@@ -2,13 +2,14 @@ package rproxy
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"net"
 	"strings"
 	"time"
 
-	resp "redisgreen.net/resp"
+	"redisgreen.net/resp"
 )
 
 type RespConn struct {
@@ -119,4 +120,10 @@ type RespMsg struct {
 
 func (m *RespMsg) String() string {
 	return string(m.data)
+}
+
+func RespMsgFromStrings(args ...string) *RespMsg {
+	buf := new(bytes.Buffer)
+	resp.NewRESPWriter(buf).WriteCommand(args...)
+	return &RespMsg{buf.Bytes()}
 }

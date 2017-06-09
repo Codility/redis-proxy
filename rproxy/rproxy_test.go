@@ -24,7 +24,7 @@ func TestProxy(t *testing.T) {
 	waitUntil(t, func() bool { return proxy.Alive() })
 
 	c := MustRespDial("tcp", proxy.ListenAddr().String(), 0, false)
-	c.MustWriteMsg(&RespMsg{[]byte("*2\r\n$3\r\nget\r\n$1\r\na\r\n")})
+	c.MustWriteMsg(RespMsgFromStrings("get", "a"))
 	resp := c.MustReadMsg()
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 
