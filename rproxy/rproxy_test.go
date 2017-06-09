@@ -27,6 +27,7 @@ func TestProxy(t *testing.T) {
 	c.MustWriteMsg(RespMsgFromStrings("get", "a"))
 	resp := c.MustReadMsg()
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
+	assert.Equal(t, srv.ReqCnt(), 1)
 
 	proxy.controller.Stop()
 	waitUntil(t, func() bool { return !proxy.Alive() })

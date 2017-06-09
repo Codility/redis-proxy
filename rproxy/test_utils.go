@@ -53,6 +53,7 @@ type FakeRedisServer struct {
 
 	mu       sync.Mutex
 	shutdown bool
+	reqCnt   int
 }
 
 func NewFakeRedisServer() *FakeRedisServer {
@@ -125,6 +126,7 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 			}
 			panic(err)
 		}
+		s.BumpReqCnt()
 		_, err = rc.WriteMsg(&RespMsg{[]byte("$4\r\nfake\r\n")})
 		if err != nil {
 			panic(err)
@@ -133,6 +135,15 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 }
 
 func (s *FakeRedisServer) ReqCnt() int {
-	// TODO
-	return 0
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.reqCnt
+}
+
+func (s *FakeRedisServer) BumpReqCnt() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.reqCnt++
 }
