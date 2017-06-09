@@ -1,6 +1,8 @@
 package rproxy
 
 import (
+	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -49,6 +51,8 @@ func (r *TestRequest) Do() {
 // FakeRedisServer
 
 type FakeRedisServer struct {
+	name string
+
 	listener *net.TCPListener
 
 	mu       sync.Mutex
@@ -56,14 +60,14 @@ type FakeRedisServer struct {
 	reqCnt   int
 }
 
-func NewFakeRedisServer() *FakeRedisServer {
-	return &FakeRedisServer{}
+func NewFakeRedisServer(name string) *FakeRedisServer {
+	return &FakeRedisServer{name: name}
 }
 
-func StartFakeRedisServer() *FakeRedisServer {
+func StartFakeRedisServer(name string) *FakeRedisServer {
 	startedChan := make(chan struct{})
 
-	srv := NewFakeRedisServer()
+	srv := NewFakeRedisServer(name)
 	go srv.Run(startedChan)
 
 	<-startedChan
@@ -121,13 +125,15 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 	for !s.IsShuttingDown() {
 		_, err := rc.ReadMsg()
 		if err != nil {
-			if IsTimeout(err) {
+			if IsTimeout(err) || (err == io.EOF) {
 				continue
 			}
 			panic(err)
 		}
 		s.BumpReqCnt()
-		_, err = rc.WriteMsg(&RespMsg{[]byte("$4\r\nfake\r\n")})
+
+		resp := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)
+		_, err = rc.WriteMsg(&RespMsg{[]byte(resp)})
 		if err != nil {
 			panic(err)
 		}

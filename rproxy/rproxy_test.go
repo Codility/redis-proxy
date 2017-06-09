@@ -7,10 +7,10 @@ import (
 )
 
 func TestProxy(t *testing.T) {
-	srv := StartFakeRedisServer()
+	srv := StartFakeRedisServer("fake")
 	assert.Equal(t, srv.ReqCnt(), 0)
 
-	proxy, err := NewProxy(&ConstConfig{
+	proxy, err := NewProxy(&TestConfig{
 		conf: &ProxyConfig{
 			UplinkAddr: srv.Addr().String(),
 			ListenOn:   "127.0.0.1:0",
@@ -24,10 +24,47 @@ func TestProxy(t *testing.T) {
 	waitUntil(t, func() bool { return proxy.Alive() })
 
 	c := MustRespDial("tcp", proxy.ListenAddr().String(), 0, false)
-	c.MustWriteMsg(RespMsgFromStrings("get", "a"))
-	resp := c.MustReadMsg()
+	resp := c.MustCall(RespMsgFromStrings("get", "a"))
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
+
+	proxy.controller.Stop()
+	waitUntil(t, func() bool { return !proxy.Alive() })
+}
+
+func TestProxySwitch(t *testing.T) {
+	srv_0 := StartFakeRedisServer("srv-0")
+	srv_1 := StartFakeRedisServer("srv-1")
+
+	conf := &TestConfig{
+		conf: &ProxyConfig{
+			UplinkAddr: srv_0.Addr().String(),
+			ListenOn:   "127.0.0.1:0",
+			AdminOn:    "127.0.0.1:0",
+		},
+	}
+
+	proxy, err := NewProxy(conf)
+	assert.Nil(t, err)
+	assert.False(t, proxy.Alive())
+
+	go proxy.Run()
+	waitUntil(t, func() bool { return proxy.Alive() })
+
+	c := MustRespDial("tcp", proxy.ListenAddr().String(), 0, false)
+	assert.Equal(t, c.MustCall(RespMsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
+
+	conf.Replace(&ProxyConfig{
+		UplinkAddr: srv_1.Addr().String(),
+		ListenOn:   "127.0.0.1:0",
+		AdminOn:    "127.0.0.1:0",
+	})
+
+	assert.Equal(t, c.MustCall(RespMsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
+
+	proxy.controller.ReloadAndWait()
+
+	assert.Equal(t, c.MustCall(RespMsgFromStrings("get", "a")).String(), "$5\r\nsrv-1\r\n")
 
 	proxy.controller.Stop()
 	waitUntil(t, func() bool { return !proxy.Alive() })

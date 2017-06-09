@@ -43,17 +43,21 @@ func (f *FileConfig) String() string {
 }
 
 ////////////////////////////////////////
-// ConstConfig
+// TestConfig
 
-type ConstConfig struct {
+type TestConfig struct {
 	conf *ProxyConfig
 	err  error
 }
 
-func (c *ConstConfig) Load() (*ProxyConfig, error) {
+func (c *TestConfig) Load() (*ProxyConfig, error) {
 	return c.conf, c.err
 }
 
-func (c *ConstConfig) String() string {
+func (c *TestConfig) String() string {
 	return "<const config>"
+}
+
+func (c *TestConfig) Replace(conf *ProxyConfig) {
+	c.conf = conf
 }

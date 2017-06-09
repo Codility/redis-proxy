@@ -89,6 +89,23 @@ func (rc *RespConn) MustReadMsg() *RespMsg {
 	return res
 }
 
+func (rc *RespConn) Call(req *RespMsg) (*RespMsg, error) {
+	_, err := rc.WriteMsg(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return rc.ReadMsg()
+}
+
+func (rc *RespConn) MustCall(req *RespMsg) *RespMsg {
+	resp, err := rc.Call(req)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
+
 func (rc *RespConn) Close() error {
 	rc.writer.Flush()
 	return rc.raw.Close()

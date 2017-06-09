@@ -99,6 +99,16 @@ func (controller *ProxyController) Reload() {
 	controller.proc.channels.command <- CMD_RELOAD
 }
 
+func (controller *ProxyController) ReloadAndWait() {
+	controller.Reload()
+	for {
+		if controller.GetInfo().State == PROXY_RUNNING {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
 func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 	go controller.run(ch)
 	for {
