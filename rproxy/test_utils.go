@@ -103,6 +103,8 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 
 func (s *FakeRedisServer) Stop() {
 	s.quit <- struct{}{}
+	// Don't bother waiting for the server to actually close, it's
+	// just in tests anyway.
 }
 
 func (s *FakeRedisServer) Addr() net.Addr {
