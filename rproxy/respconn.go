@@ -38,6 +38,14 @@ func RespDial(proto, addr string, readTimeLimitMs int64, log bool) (*RespConn, e
 	}
 }
 
+func MustRespDial(proto, addr string, readTimeLimitMs int64, log bool) *RespConn {
+	conn, err := RespDial(proto, addr, readTimeLimitMs, log)
+	if err != nil {
+		panic(err)
+	}
+	return conn
+}
+
 func (rc *RespConn) WriteMsg(msg *RespMsg) (int, error) {
 	if rc.log {
 		rc.logMessage(false, msg.data)
@@ -47,6 +55,14 @@ func (rc *RespConn) WriteMsg(msg *RespMsg) (int, error) {
 		rc.writer.Flush()
 	}
 	return res, err
+}
+
+func (rc *RespConn) MustWriteMsg(msg *RespMsg) int {
+	res, err := rc.WriteMsg(msg)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func (rc *RespConn) ReadMsg() (*RespMsg, error) {
@@ -62,6 +78,14 @@ func (rc *RespConn) ReadMsg() (*RespMsg, error) {
 		}
 	}
 	return &RespMsg{res}, err
+}
+
+func (rc *RespConn) MustReadMsg() *RespMsg {
+	res, err := rc.ReadMsg()
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func (rc *RespConn) Close() error {
