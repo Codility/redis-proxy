@@ -10,7 +10,6 @@ func TestProxy(t *testing.T) {
 	srv := StartFakeRedisServer()
 	assert.Equal(t, srv.ReqCnt(), 0)
 
-	srv.Addr()
 	proxy, err := NewProxy(&ConstConfig{
 		conf: &ProxyConfig{
 			UplinkAddr: srv.Addr().String(),
