@@ -35,7 +35,7 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) Run() error {
-	genListener, err := net.Listen("tcp", proxy.config.ListenOn)
+	genListener, err := net.Listen("tcp", proxy.config.Listen.Addr)
 	if err != nil {
 		return err
 	}
@@ -105,11 +105,11 @@ func (proxy *Proxy) watchSignals() {
 
 func (proxy *Proxy) verifyNewConfig(newConfig *ProxyConfig) error {
 	config := proxy.config
-	if config.ListenOn != newConfig.ListenOn {
-		return errors.New("New config must have the same listen_on address as the old one.")
+	if !config.Listen.Equal(&newConfig.Listen) {
+		return errors.New("New config must have the same `listen` block as the old one.")
 	}
-	if config.AdminOn != newConfig.AdminOn {
-		return errors.New("New config must have the same admin_on address as the old one.")
+	if !config.Admin.Equal(&newConfig.Admin) {
+		return errors.New("New config must have the same `admin` block as the old one.")
 	}
 	return nil
 }
@@ -117,7 +117,7 @@ func (proxy *Proxy) verifyNewConfig(newConfig *ProxyConfig) error {
 func (proxy *Proxy) handleClient(cliConn *RespConn) {
 	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
-	uplinkAddr := ""
+	uplinkConf := &AddrSpec{}
 	var uplinkConn *RespConn
 
 	defer func() {
@@ -136,13 +136,13 @@ func (proxy *Proxy) handleClient(cliConn *RespConn) {
 
 		res, err := proxy.controller.CallUplink(func() (*RespMsg, error) {
 			config := proxy.config
-			currUplinkAddr := config.UplinkAddr
-			if uplinkAddr != currUplinkAddr {
-				uplinkAddr = currUplinkAddr
+			currUplinkConf := &config.Uplink
+			if !uplinkConf.Equal(currUplinkConf) {
+				uplinkConf = currUplinkConf
 				if uplinkConn != nil {
 					uplinkConn.Close()
 				}
-				uplinkConn, err = RespDial("tcp", uplinkAddr,
+				uplinkConn, err = RespDial("tcp", uplinkConf.Addr,
 					config.ReadTimeLimitMs,
 					config.LogMessages,
 				)

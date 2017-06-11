@@ -5,12 +5,25 @@ import (
 	"io/ioutil"
 )
 
+////////////////////////////////////////
+// AddrSpec
+
+type AddrSpec struct {
+	Addr string `json:"addr"`
+	Pass string `json:"pass"`
+}
+
+func (as *AddrSpec) Equal(other *AddrSpec) bool {
+	return (as.Addr == other.Addr) &&
+		(as.Pass == other.Pass)
+}
+
 type ProxyConfig struct {
-	UplinkAddr      string `json:"uplink_addr"`
-	ListenOn        string `json:"listen_on"`
-	AdminOn         string `json:"admin_on"`
-	ReadTimeLimitMs int64  `json:"read_time_limit_ms"`
-	LogMessages     bool   `json:"log_messages"`
+	Uplink          AddrSpec `json:"uplink"`
+	Listen          AddrSpec `json:"listen"`
+	Admin           AddrSpec `json:"admin"`
+	ReadTimeLimitMs int64    `json:"read_time_limit_ms"`
+	LogMessages     bool     `json:"log_messages"`
 }
 
 type ConfigLoader interface {

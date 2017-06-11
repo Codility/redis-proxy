@@ -23,8 +23,8 @@ func (proxy *Proxy) publishAdminInterface() {
 	})
 
 	config := proxy.config
-	log.Printf("Admin URL: http://%s/\n", config.AdminOn)
-	log.Fatal(http.ListenAndServe(config.AdminOn, mux))
+	log.Printf("Admin URL: http://%s/\n", config.Admin.Addr)
+	log.Fatal(http.ListenAndServe(config.Admin.Addr, mux))
 }
 
 var statusTemplate *template.Template
@@ -54,7 +54,7 @@ func (proxy *Proxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, for
 	info := map[string]interface{}{
 		"activeRequests": st.ActiveRequests,
 		"config":         st.Config,
-		"stateStr":       string(st.State),
+		"stateStr":       st.State.String(),
 	}
 	infoBytes, _ := json.MarshalIndent(info, "", "    ")
 

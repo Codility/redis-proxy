@@ -1,7 +1,16 @@
 {
-  "uplink_addr": "localhost:6379",
-  "listen_on": "127.0.0.1:7010",
-  "admin_on": "127.0.0.1:7011",
+  "uplink": {
+    "addr": "localhost:6379"
+    "pass": "redis-password"
+  },
+  "listen": {
+    "addr": "127.0.0.1:7010",
+    "pass": "client-password"
+  },
+  "admin": {
+    "addr": "127.0.0.1:7011",
+    "pass": "http-auth-password"
+  },
   "log_messages": false,
   "read_time_limit_ms": 5000
 }

@@ -133,7 +133,8 @@ func getStatus(adminPort int) string {
 		return fmt.Sprintf("ERROR, %v", err)
 	}
 
-	port := func(addr string) string {
+	portFromAddrSpec := func(addrSpec interface{}) string {
+		addr := addrSpec.(map[string]interface{})["addr"].(string)
 		_, p, err := net.SplitHostPort(addr)
 		if err != nil {
 			return fmt.Sprintf("%v", err)
@@ -143,8 +144,8 @@ func getStatus(adminPort int) string {
 
 	config := data["config"].(map[string]interface{})
 	return fmt.Sprintf("%v -> %v, %v, active: %v",
-		port(config["listen_on"].(string)),
-		port(config["uplink_addr"].(string)),
+		portFromAddrSpec(config["listen"]),
+		portFromAddrSpec(config["uplink"]),
 		data["stateStr"],
 		data["activeRequests"],
 	)

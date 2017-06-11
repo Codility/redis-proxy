@@ -12,9 +12,9 @@ func TestProxy(t *testing.T) {
 
 	proxy, err := NewProxy(&TestConfig{
 		conf: &ProxyConfig{
-			UplinkAddr: srv.Addr().String(),
-			ListenOn:   "127.0.0.1:0",
-			AdminOn:    "127.0.0.1:0",
+			Uplink: AddrSpec{Addr: srv.Addr().String()},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	assert.Nil(t, err)
@@ -38,9 +38,9 @@ func TestProxySwitch(t *testing.T) {
 
 	conf := &TestConfig{
 		conf: &ProxyConfig{
-			UplinkAddr: srv_0.Addr().String(),
-			ListenOn:   "127.0.0.1:0",
-			AdminOn:    "127.0.0.1:0",
+			Uplink: AddrSpec{Addr: srv_0.Addr().String()},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 
@@ -55,9 +55,9 @@ func TestProxySwitch(t *testing.T) {
 	assert.Equal(t, c.MustCall(RespMsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 
 	conf.Replace(&ProxyConfig{
-		UplinkAddr: srv_1.Addr().String(),
-		ListenOn:   "127.0.0.1:0",
-		AdminOn:    "127.0.0.1:0",
+		Uplink: AddrSpec{Addr: srv_1.Addr().String()},
+		Listen: AddrSpec{Addr: "127.0.0.1:0"},
+		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
 
 	assert.Equal(t, c.MustCall(RespMsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
