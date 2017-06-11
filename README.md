@@ -16,6 +16,7 @@ Current state
 
  - TODO: switch-test: wait for replication to really catch up
  - TODO: move switchover logic to proxy (old proxy can handle the entire process)
+ - TODO: better config file validation (require minimal set of values)
 
 
 Possible optimizations
