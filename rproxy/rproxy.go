@@ -135,15 +135,16 @@ func (proxy *Proxy) handleClient(cliConn *RespConn) {
 		}
 
 		res, err := proxy.controller.CallUplink(func() (*RespMsg, error) {
-			currUplinkAddr := proxy.config.UplinkAddr
+			config := proxy.config
+			currUplinkAddr := config.UplinkAddr
 			if uplinkAddr != currUplinkAddr {
 				uplinkAddr = currUplinkAddr
 				if uplinkConn != nil {
 					uplinkConn.Close()
 				}
 				uplinkConn, err = RespDial("tcp", uplinkAddr,
-					proxy.config.ReadTimeLimitMs,
-					proxy.config.LogMessages,
+					config.ReadTimeLimitMs,
+					config.LogMessages,
 				)
 				if err != nil {
 					return nil, err
