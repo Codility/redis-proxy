@@ -44,12 +44,7 @@ func TestProxySwitch(t *testing.T) {
 		},
 	}
 
-	proxy, err := NewProxy(conf)
-	assert.Nil(t, err)
-	assert.False(t, proxy.Alive())
-
-	go proxy.Run()
-	waitUntil(t, func() bool { return proxy.Alive() })
+	proxy := mustStartTestProxy(t, conf)
 
 	c := MustRespDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t, c.MustCall(RespMsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
