@@ -83,13 +83,15 @@ func (p *Proxy) Stop() {
 func (p *Proxy) WriteConfig() {
 	content := fmt.Sprintf(`{
   "uplink": {
-    "addr": "localhost:%d"
+    "addr": "localhost:%[1]d",
+    "pass": "pass-%[1]d"
   },
   "listen": {
-    "addr": "127.0.0.1:%d"
+    "addr": "127.0.0.1:%[2]d",
+    "pass": "pass-%[2]d"
   },
   "admin": {
-    "addr": "127.0.0.1:%d"
+    "addr": "127.0.0.1:%[3]d"
   },
   "log_messages": false,
   "read_time_limit_ms": 5000

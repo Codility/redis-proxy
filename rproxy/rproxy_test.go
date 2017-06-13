@@ -1,7 +1,12 @@
 package rproxy
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stvp/assert"
 	"gitlab.codility.net/marcink/redis-proxy/fakeredis"
@@ -125,6 +130,47 @@ func TestOpenProxyBlocksAuthCommands(t *testing.T) {
 	assert.Equal(t, srv.ReqCnt(), 0)
 }
 
-func TestProxyCanAuthenticateWithRedis(t *testing.T) {
+func mustStartRedisServer(port int, args ...string) *exec.Cmd {
+	fullArgs := append([]string{"--port", strconv.Itoa(port)}, args...)
+	p := exec.Command("redis-server", fullArgs...)
+	p.Stdout = os.Stdout
+	p.Stderr = os.Stderr
+	if err := p.Start(); err != nil {
+		panic(err)
+	}
 
+	for {
+		c, err := resp.Dial("tcp", fmt.Sprintf("localhost:%d", port), 0, false)
+		if err == nil {
+			c.Close()
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	return p
+}
+
+func TestProxyCanAuthenticateWithRedis(t *testing.T) {
+	redis := mustStartRedisServer(
+		BASE_TEST_REDIS_PORT,
+		"--requirepass", "test-pass")
+	defer redis.Process.Kill()
+
+	redisUrl := fmt.Sprintf("localhost:%d", BASE_TEST_REDIS_PORT)
+	conf := &TestConfig{
+		conf: &ProxyConfig{
+			Uplink: AddrSpec{Addr: redisUrl, Pass: "test-pass"},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	}
+
+	proxy := mustStartTestProxy(t, conf)
+	defer proxy.controller.Stop()
+
+	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	assert.Equal(t,
+		c.MustCall(resp.MsgFromStrings("SET", "A", "test")).String(),
+		"+OK\r\n")
 }
