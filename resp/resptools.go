@@ -1,8 +1,8 @@
-package rproxy
+package resp
 
 import "net"
 
-func IsTimeout(err error) bool {
+func IsNetTimeout(err error) bool {
 	opErr, ok := err.(*net.OpError)
 	return ok && opErr.Timeout()
 }

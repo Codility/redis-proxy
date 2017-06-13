@@ -1,4 +1,4 @@
-package rproxy
+package resp
 
 import (
 	"testing"
@@ -6,8 +6,8 @@ import (
 	"github.com/stvp/assert"
 )
 
-func msg(content string) *RespMsg {
-	return &RespMsg{data: []byte(content)}
+func msg(content string) *Msg {
+	return &Msg{data: []byte(content)}
 }
 
 func TestAnalysis(t *testing.T) {

@@ -1,6 +1,6 @@
 // From https://www.redisgreen.net/blog/reading-and-writing-redis-protocol/
 
-package resp
+package respio
 
 import (
 	"bufio"

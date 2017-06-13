@@ -1,10 +1,10 @@
-package rproxy
+package resp
 
 import (
 	"bytes"
 	"strconv"
 
-	"redisgreen.net/resp"
+	"redisgreen.net/respio"
 )
 
 type MessageOp int
@@ -27,21 +27,25 @@ func (m MessageOp) String() string {
 	}
 }
 
-type RespMsg struct {
+type Msg struct {
 	data []byte
 
 	op       MessageOp
 	firstArg string
 }
 
-func RespMsgFromStrings(args ...string) *RespMsg {
+func MsgFromStrings(args ...string) *Msg {
 	buf := new(bytes.Buffer)
-	resp.NewRESPWriter(buf).WriteCommand(args...)
-	return &RespMsg{data: buf.Bytes()}
+	respio.NewRESPWriter(buf).WriteCommand(args...)
+	return &Msg{data: buf.Bytes()}
 }
 
-func (m *RespMsg) String() string {
+func (m *Msg) String() string {
 	return string(m.data)
+}
+
+func (m *Msg) Data() []byte {
+	return m.data
 }
 
 ////////////////////
@@ -50,12 +54,12 @@ func (m *RespMsg) String() string {
 // Majority of messages have no meaning to the proxy and it does not
 // make any sense to parse them.
 
-func (m *RespMsg) Op() MessageOp {
+func (m *Msg) Op() MessageOp {
 	m.analyse()
 	return m.op
 }
 
-func (m *RespMsg) Password() string {
+func (m *Msg) Password() string {
 	if m.op == MSG_OP_AUTH {
 		return m.firstArg
 	}
@@ -68,7 +72,7 @@ func init() {
 	PREFIX_AUTH = []byte("*2\r\n$4\r\nAUTH\r\n$")
 }
 
-func (m *RespMsg) analyse() {
+func (m *Msg) analyse() {
 	if m.op != MSG_OP_UNCHECKED {
 		return
 	}
