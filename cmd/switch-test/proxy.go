@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -25,6 +26,10 @@ func NewProxy(config_file string, listenPort, adminPort, uplinkPort int) *Proxy 
 		adminPort:   adminPort,
 		uplinkPort:  uplinkPort,
 	}
+}
+
+func pass(port int) string {
+	return "pass-" + strconv.Itoa(port)
 }
 
 func handleOutput(prefix string, output io.ReadCloser) {
@@ -55,14 +60,14 @@ func handleProcessOutput(cmd *exec.Cmd, stdoutPrefix, stderrPrefix string) {
 }
 
 func (p *Proxy) Start() {
-	log.Printf("Proxy[%d -> %d].Start", p.listenPort, p.uplinkPort)
 	if p.cmd != nil {
 		panic("Proxy already running")
 	}
 	p.WriteConfig()
 	p.cmd = exec.Command("./redis-proxy", "-f", p.config_file)
-
 	handleProcessOutput(p.cmd, fmt.Sprintf("[%d:stdout]", p.listenPort), fmt.Sprintf("[%d:stderr]", p.listenPort))
+
+	log.Printf("Starting redis-proxy at %d, password: '%s'", p.listenPort, pass(p.listenPort))
 
 	if err := p.cmd.Start(); err != nil {
 		panic(err)
@@ -70,7 +75,6 @@ func (p *Proxy) Start() {
 }
 
 func (p *Proxy) Stop() {
-	log.Printf("Proxy[%d -> %d].Stop", p.listenPort, p.uplinkPort)
 	if p.cmd == nil {
 		return
 	}
@@ -83,34 +87,31 @@ func (p *Proxy) Stop() {
 func (p *Proxy) WriteConfig() {
 	content := fmt.Sprintf(`{
   "uplink": {
-    "addr": "localhost:%[1]d",
-    "pass": "pass-%[1]d"
+    "addr": "localhost:%d",
+    "pass": "%s"
   },
   "listen": {
-    "addr": "127.0.0.1:%[2]d",
-    "pass": "pass-%[2]d"
+    "addr": "127.0.0.1:%d",
+    "pass": "%s"
   },
   "admin": {
-    "addr": "127.0.0.1:%[3]d"
+    "addr": "127.0.0.1:%d"
   },
   "log_messages": false,
   "read_time_limit_ms": 5000
-}`, p.uplinkPort, p.listenPort, p.adminPort)
-	log.Printf("Proxy[%d -> %d].WriteConfig", p.listenPort, p.uplinkPort)
+}`, p.uplinkPort, pass(p.uplinkPort), p.listenPort, pass(p.listenPort), p.adminPort)
 	if err := ioutil.WriteFile(p.config_file, []byte(content), 0666); err != nil {
 		panic(err)
 	}
 }
 
 func (p *Proxy) LinkTo(newUplink int) {
-	log.Printf("Proxy[%d -> %d].LinkTo(%d)", p.listenPort, p.uplinkPort, newUplink)
 	p.uplinkPort = newUplink
 	p.WriteConfig()
 	p.Reload()
 }
 
 func (p *Proxy) Reload() {
-	log.Printf("Proxy[%d -> %d].Reload", p.listenPort, p.uplinkPort)
 	if p.cmd == nil {
 		panic("Proxy not running")
 	}
@@ -120,7 +121,6 @@ func (p *Proxy) Reload() {
 }
 
 func (p *Proxy) PauseAndWait() {
-	log.Printf("Proxy[%d -> %d].PauseAndWait", p.listenPort, p.uplinkPort)
 	u := fmt.Sprintf("http://localhost:%d/cmd/", p.adminPort)
 	resp, err := http.PostForm(u, url.Values{"cmd": {"pause-and-wait"}})
 	if err != nil {
@@ -129,5 +129,4 @@ func (p *Proxy) PauseAndWait() {
 	if resp.StatusCode != 200 {
 		panic(resp)
 	}
-	log.Printf("Proxy[%d -> %d].PauseAndWait done", p.listenPort, p.uplinkPort)
 }
