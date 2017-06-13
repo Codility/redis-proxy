@@ -117,6 +117,13 @@ func (rc *Conn) MustCall(req *Msg) *Msg {
 	return resp
 }
 
+func (rc *Conn) MustCallAndGetOk(req *Msg) {
+	resp := rc.MustCall(req)
+	if !resp.IsOk() {
+		panic("Expected +OK from Redis, got: " + resp.String())
+	}
+}
+
 func (rc *Conn) Close() error {
 	rc.writer.Flush()
 	return rc.raw.Close()
@@ -124,6 +131,19 @@ func (rc *Conn) Close() error {
 
 func (rc *Conn) RemoteAddr() net.Addr {
 	return rc.raw.RemoteAddr()
+}
+
+func (rc *Conn) Authenticate(pass string) error {
+	resp, err := rc.Call(MsgFromStrings("AUTH", pass))
+	if err != nil {
+		return err
+	}
+	if !resp.IsOk() {
+		return fmt.Errorf(
+			"Authentication error: Redis responded with '%s'",
+			resp.String())
+	}
+	return nil
 }
 
 func (rc *Conn) logMessage(inbound bool, data []byte) {
