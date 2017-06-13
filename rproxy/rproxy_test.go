@@ -17,7 +17,7 @@ const BASE_TEST_REDIS_PORT = 7300
 
 func TestProxy(t *testing.T) {
 	srv := fakeredis.Start("fake")
-	assert.Equal(t, srv.ReqCnt(), 0)
+	defer srv.Stop()
 
 	proxy, err := NewProxy(&TestConfig{
 		conf: &ProxyConfig{
@@ -43,7 +43,9 @@ func TestProxy(t *testing.T) {
 
 func TestProxySwitch(t *testing.T) {
 	srv_0 := fakeredis.Start("srv-0")
+	defer srv_0.Stop()
 	srv_1 := fakeredis.Start("srv-1")
+	defer srv_1.Stop()
 
 	conf := &TestConfig{
 		conf: &ProxyConfig{
