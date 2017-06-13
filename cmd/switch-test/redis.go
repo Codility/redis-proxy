@@ -1,17 +1,15 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	resp "redisgreen.net/resp"
+	"gitlab.codility.net/marcink/redis-proxy/resp"
 )
 
 type Redis struct {
@@ -68,25 +66,15 @@ func (r *Redis) SlaveOf(master *Redis) {
 	} else {
 		log.Printf("Redis[%d].SlaveOf(%d)", r.port, master.port)
 	}
-	conn, err := net.Dial("tcp", r.Url())
-	if err != nil {
-		panic(err)
-	}
-
-	reader := resp.NewReader(bufio.NewReader(conn))
-	writer := bufio.NewWriter(conn)
+	conn := resp.MustDial("tcp", r.Url(), 0, false)
 
 	if master == nil {
-		writer.Write([]byte("SLAVEOF NO ONE\n"))
+		conn.MustWrite([]byte("SLAVEOF NO ONE\n"))
 	} else {
-		writer.Write([]byte(fmt.Sprintf("SLAVEOF localhost %d\n", master.port)))
+		conn.MustWrite([]byte(fmt.Sprintf("SLAVEOF localhost %d\n", master.port)))
 	}
-	writer.Flush()
-	resp, err := reader.ReadObject()
-	if err != nil {
-		panic(err)
-	}
-	if strings.TrimSpace(string(resp)) != "+OK" {
-		panic("REDIS error: " + string(resp))
+	resp := conn.MustReadMsg()
+	if strings.TrimSpace(resp.String()) != "+OK" {
+		panic("REDIS error: " + resp.String())
 	}
 }

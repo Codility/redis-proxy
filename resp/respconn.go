@@ -1,4 +1,4 @@
-package rproxy
+package resp
 
 import (
 	"bufio"
@@ -8,45 +8,45 @@ import (
 	"strings"
 	"time"
 
-	"redisgreen.net/resp"
+	"redisgreen.net/respio"
 )
 
-type RespConn struct {
+type Conn struct {
 	raw    net.Conn
-	reader *resp.RESPReader
+	reader *respio.RESPReader
 	writer *bufio.Writer
 	log    bool
 
 	readTimeLimitMs int64
 }
 
-func NewRespConn(rawConn net.Conn, readTimeLimitMs int64, log bool) *RespConn {
-	return &RespConn{
+func NewConn(rawConn net.Conn, readTimeLimitMs int64, log bool) *Conn {
+	return &Conn{
 		raw:    rawConn,
 		log:    log,
-		reader: resp.NewReader(bufio.NewReader(rawConn)),
+		reader: respio.NewReader(bufio.NewReader(rawConn)),
 		writer: bufio.NewWriter(rawConn),
 	}
 }
 
-func RespDial(proto, addr string, readTimeLimitMs int64, log bool) (*RespConn, error) {
+func Dial(proto, addr string, readTimeLimitMs int64, log bool) (*Conn, error) {
 	conn, err := net.Dial(proto, addr)
 	if err == nil {
-		return NewRespConn(conn, readTimeLimitMs, log), nil
+		return NewConn(conn, readTimeLimitMs, log), nil
 	} else {
 		return nil, err
 	}
 }
 
-func MustRespDial(proto, addr string, readTimeLimitMs int64, log bool) *RespConn {
-	conn, err := RespDial(proto, addr, readTimeLimitMs, log)
+func MustDial(proto, addr string, readTimeLimitMs int64, log bool) *Conn {
+	conn, err := Dial(proto, addr, readTimeLimitMs, log)
 	if err != nil {
 		panic(err)
 	}
 	return conn
 }
 
-func (rc *RespConn) Write(data []byte) (int, error) {
+func (rc *Conn) Write(data []byte) (int, error) {
 	if rc.log {
 		rc.logMessage(false, data)
 	}
@@ -57,11 +57,19 @@ func (rc *RespConn) Write(data []byte) (int, error) {
 	return res, nil
 }
 
-func (rc *RespConn) WriteMsg(msg *RespMsg) (int, error) {
+func (rc *Conn) MustWrite(data []byte) int {
+	res, err := rc.Write(data)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
+
+func (rc *Conn) WriteMsg(msg *Msg) (int, error) {
 	return rc.Write(msg.data)
 }
 
-func (rc *RespConn) MustWriteMsg(msg *RespMsg) int {
+func (rc *Conn) MustWriteMsg(msg *Msg) int {
 	res, err := rc.WriteMsg(msg)
 	if err != nil {
 		panic(err)
@@ -69,7 +77,7 @@ func (rc *RespConn) MustWriteMsg(msg *RespMsg) int {
 	return res
 }
 
-func (rc *RespConn) ReadMsg() (*RespMsg, error) {
+func (rc *Conn) ReadMsg() (*Msg, error) {
 	if rc.readTimeLimitMs > 0 {
 		rc.raw.SetReadDeadline(time.Now().Add(time.Duration(rc.readTimeLimitMs) * time.Millisecond))
 	}
@@ -81,10 +89,10 @@ func (rc *RespConn) ReadMsg() (*RespMsg, error) {
 			rc.logMessage(true, res)
 		}
 	}
-	return &RespMsg{data: res}, err
+	return &Msg{data: res}, err
 }
 
-func (rc *RespConn) MustReadMsg() *RespMsg {
+func (rc *Conn) MustReadMsg() *Msg {
 	res, err := rc.ReadMsg()
 	if err != nil {
 		panic(err)
@@ -92,7 +100,7 @@ func (rc *RespConn) MustReadMsg() *RespMsg {
 	return res
 }
 
-func (rc *RespConn) Call(req *RespMsg) (*RespMsg, error) {
+func (rc *Conn) Call(req *Msg) (*Msg, error) {
 	_, err := rc.WriteMsg(req)
 	if err != nil {
 		return nil, err
@@ -101,7 +109,7 @@ func (rc *RespConn) Call(req *RespMsg) (*RespMsg, error) {
 	return rc.ReadMsg()
 }
 
-func (rc *RespConn) MustCall(req *RespMsg) *RespMsg {
+func (rc *Conn) MustCall(req *Msg) *Msg {
 	resp, err := rc.Call(req)
 	if err != nil {
 		panic(err)
@@ -109,16 +117,16 @@ func (rc *RespConn) MustCall(req *RespMsg) *RespMsg {
 	return resp
 }
 
-func (rc *RespConn) Close() error {
+func (rc *Conn) Close() error {
 	rc.writer.Flush()
 	return rc.raw.Close()
 }
 
-func (rc *RespConn) RemoteAddr() net.Addr {
+func (rc *Conn) RemoteAddr() net.Addr {
 	return rc.raw.RemoteAddr()
 }
 
-func (rc *RespConn) logMessage(inbound bool, data []byte) {
+func (rc *Conn) logMessage(inbound bool, data []byte) {
 	dirStr := "<"
 	if inbound {
 		dirStr = ">"

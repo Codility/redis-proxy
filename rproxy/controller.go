@@ -3,6 +3,8 @@ package rproxy
 import (
 	"strconv"
 	"time"
+
+	"gitlab.codility.net/marcink/redis-proxy/resp"
 )
 
 ////////////////////////////////////////
@@ -59,7 +61,7 @@ func NewProxyController() *ProxyController {
 	return &ProxyController{}
 }
 
-func (controller *ProxyController) CallUplink(block func() (*RespMsg, error)) (*RespMsg, error) {
+func (controller *ProxyController) CallUplink(block func() (*resp.Msg, error)) (*resp.Msg, error) {
 	controller.enterExecution()
 	defer controller.leaveExecution()
 

@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"gitlab.codility.net/marcink/redis-proxy/resp"
 )
 
 type ProxyConfigHolder interface {
@@ -55,12 +57,12 @@ func (proxy *Proxy) Run() error {
 		listener.SetDeadline(time.Now().Add(time.Second))
 		conn, err := listener.Accept()
 		if err != nil {
-			if IsTimeout(err) {
+			if resp.IsNetTimeout(err) {
 				continue
 			}
 			return err
 		} else {
-			go proxy.handleClient(NewRespConn(conn, 0, proxy.config.LogMessages))
+			go proxy.handleClient(resp.NewConn(conn, 0, proxy.config.LogMessages))
 		}
 	}
 	return nil
@@ -125,11 +127,11 @@ const (
 	ERR_NO_PASSWORD_SET = "-ERR Client sent AUTH, but no password is set\r\n"
 )
 
-func (proxy *Proxy) handleClient(cliConn *RespConn) {
+func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
 	uplinkConf := &AddrSpec{}
-	var uplinkConn *RespConn
+	var uplinkConn *resp.Conn
 	authenticated := false
 
 	defer func() {
@@ -146,7 +148,7 @@ func (proxy *Proxy) handleClient(cliConn *RespConn) {
 			return
 		}
 
-		if req.Op() == MSG_OP_AUTH {
+		if req.Op() == resp.MSG_OP_AUTH {
 			if proxy.RequiresClientAuth() {
 				authenticated = (req.Password() == proxy.config.Listen.Pass)
 				if authenticated {
@@ -165,7 +167,7 @@ func (proxy *Proxy) handleClient(cliConn *RespConn) {
 			continue
 		}
 
-		res, err := proxy.controller.CallUplink(func() (*RespMsg, error) {
+		res, err := proxy.controller.CallUplink(func() (*resp.Msg, error) {
 			config := proxy.config
 			currUplinkConf := &config.Uplink
 			if !uplinkConf.Equal(currUplinkConf) {
@@ -173,7 +175,7 @@ func (proxy *Proxy) handleClient(cliConn *RespConn) {
 				if uplinkConn != nil {
 					uplinkConn.Close()
 				}
-				uplinkConn, err = RespDial("tcp", uplinkConf.Addr,
+				uplinkConn, err = resp.Dial("tcp", uplinkConf.Addr,
 					config.ReadTimeLimitMs,
 					config.LogMessages,
 				)
