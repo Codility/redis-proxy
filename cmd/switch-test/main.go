@@ -27,8 +27,8 @@ const (
 func main() {
 	log.SetFlags(log.Ltime)
 
-	proxy_a := NewProxy("conf-a.json", PROXY_A_PORT, PROXY_A_ADMIN, REDIS_A_PORT)
-	proxy_b := NewProxy("conf-b.json", PROXY_B_PORT, PROXY_B_ADMIN, PROXY_A_PORT)
+	proxy_a := NewProxy("tmp/conf-a.json", PROXY_A_PORT, PROXY_A_ADMIN, REDIS_A_PORT)
+	proxy_b := NewProxy("tmp/conf-b.json", PROXY_B_PORT, PROXY_B_ADMIN, PROXY_A_PORT)
 
 	proxy_a.Start()
 	defer proxy_a.Stop()

@@ -35,13 +35,14 @@ func (r *Redis) Start() {
 
 	rdbFile := fmt.Sprintf("save-%d-%d.rdb", r.port, time.Now().Unix())
 	args := []string{
-		"./redis.conf",
+		"../redis.conf",
 		"--dbfilename", rdbFile,
 		"--requirepass", r.Pass(),
 		"--port", strconv.Itoa(r.port),
 	}
 	r.cmd = exec.Command("redis-server", args...)
 	handleProcessOutput(r.cmd, fmt.Sprintf("[Redis-%d:stdout]", r.port), fmt.Sprintf("[Redis-%d:stderr]", r.port))
+	r.cmd.Dir = "tmp/"
 
 	log.Printf("Starting redis-server %v", args)
 
