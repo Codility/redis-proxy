@@ -1,26 +1,11 @@
 package rproxy
 
 import (
-	"runtime/debug"
 	"testing"
 	"time"
 
 	"github.com/stvp/assert"
 )
-
-func waitUntil(t *testing.T, expr func() bool) {
-	const duration = time.Second
-
-	deadline := time.Now().Add(duration)
-	for time.Now().Before(deadline) {
-		if expr() {
-			return
-		}
-		time.Sleep(250 * time.Microsecond)
-	}
-	debug.PrintStack()
-	t.Fatalf("Expression still false after %v", duration)
-}
 
 func TestControllerStartStop(t *testing.T) {
 	contr := NewProxyController()

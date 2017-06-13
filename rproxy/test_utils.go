@@ -4,8 +4,12 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime/debug"
 	"sync"
+	"testing"
 	"time"
+
+	"github.com/stvp/assert"
 )
 
 ////////////////////////////////////////
@@ -133,7 +137,7 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 		s.BumpReqCnt()
 
 		resp := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)
-		_, err = rc.WriteMsg(&RespMsg{[]byte(resp)})
+		_, err = rc.WriteMsg(&RespMsg{data: []byte(resp)})
 		if err != nil {
 			panic(err)
 		}
@@ -152,4 +156,31 @@ func (s *FakeRedisServer) BumpReqCnt() {
 	defer s.mu.Unlock()
 
 	s.reqCnt++
+}
+
+////////////////////////////////////////
+// Other plumbing
+
+func mustStartTestProxy(t *testing.T, conf *TestConfig) *Proxy {
+	proxy, err := NewProxy(conf)
+	assert.Nil(t, err)
+	assert.False(t, proxy.Alive())
+
+	go proxy.Run()
+	waitUntil(t, func() bool { return proxy.Alive() })
+	return proxy
+}
+
+func waitUntil(t *testing.T, expr func() bool) {
+	const duration = time.Second
+
+	deadline := time.Now().Add(duration)
+	for time.Now().Before(deadline) {
+		if expr() {
+			return
+		}
+		time.Sleep(250 * time.Microsecond)
+	}
+	debug.PrintStack()
+	t.Fatalf("Expression still false after %v", duration)
 }
