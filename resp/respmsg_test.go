@@ -20,3 +20,9 @@ func TestAnalysis(t *testing.T) {
 	assert.Equal(t, m.Op(), MSG_OP_AUTH)
 	assert.Equal(t, m.Password(), "pass")
 }
+
+func TestHelpers(t *testing.T) {
+	assert.True(t, msg("+OK\r\n").IsOk())
+	assert.True(t, !msg("+OK\r").IsOk())
+	assert.True(t, !msg("-ERR some error\r\n").IsOk())
+}

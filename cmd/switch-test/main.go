@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -93,14 +92,6 @@ func main() {
 
 		log.Print("Done switching to Redis A")
 	}
-}
-
-func start_redis(port int) *exec.Cmd {
-	cmd := exec.Command("redis-server", "--port", fmt.Sprintf("%d", port))
-	if err := cmd.Start(); err != nil {
-		panic(err)
-	}
-	return cmd
 }
 
 func statusLoop() {

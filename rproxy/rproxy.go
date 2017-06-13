@@ -132,7 +132,7 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 
 	uplinkConf := &AddrSpec{}
 	var uplinkConn *resp.Conn
-	authenticated := false
+	cliAuthenticated := false
 
 	defer func() {
 		cliConn.Close()
@@ -150,8 +150,8 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 
 		if req.Op() == resp.MSG_OP_AUTH {
 			if proxy.RequiresClientAuth() {
-				authenticated = (req.Password() == proxy.config.Listen.Pass)
-				if authenticated {
+				cliAuthenticated = (req.Password() == proxy.config.Listen.Pass)
+				if cliAuthenticated {
 					cliConn.Write([]byte(ERR_OK))
 				} else {
 					cliConn.Write([]byte(ERR_INVALID_PASS))
@@ -162,7 +162,7 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 			continue
 		}
 
-		if proxy.RequiresClientAuth() && !authenticated {
+		if proxy.RequiresClientAuth() && !cliAuthenticated {
 			cliConn.Write([]byte(ERR_NOAUTH))
 			continue
 		}
@@ -181,6 +181,13 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 				)
 				if err != nil {
 					return nil, err
+				}
+
+				if uplinkConf.Pass != "" {
+					err = uplinkConn.Authenticate(uplinkConf.Pass)
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 

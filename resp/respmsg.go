@@ -66,10 +66,16 @@ func (m *Msg) Password() string {
 	return ""
 }
 
+func (m *Msg) IsOk() bool {
+	return bytes.Equal(m.data, MSG_DATA_OK)
+}
+
 var PREFIX_AUTH []byte
+var MSG_DATA_OK []byte
 
 func init() {
 	PREFIX_AUTH = []byte("*2\r\n$4\r\nAUTH\r\n$")
+	MSG_DATA_OK = []byte("+OK\r\n")
 }
 
 func (m *Msg) analyse() {
