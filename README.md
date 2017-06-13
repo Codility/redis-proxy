@@ -14,6 +14,7 @@ Current state
  - TODO: switch-test: wait for replication to really catch up
  - TODO: move switchover logic to proxy (old proxy can handle the entire process)
  - TODO: better config file validation (require minimal set of values)
+ - TODO: verify connection to new Redis before reloading config
 
 
 Possible optimizations
