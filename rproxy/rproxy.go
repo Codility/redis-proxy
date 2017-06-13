@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -152,7 +151,7 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 
 		if req.Op() == resp.MSG_OP_AUTH {
 			if proxy.RequiresClientAuth() {
-				cliAuthenticated = (req.Password() == proxy.config.Listen.Pass)
+				cliAuthenticated = (req.FirstArg() == proxy.config.Listen.Pass)
 				if cliAuthenticated {
 					cliConn.Write([]byte(ERR_OK))
 				} else {
@@ -210,10 +209,7 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 		}
 
 		if (req.Op() == resp.MSG_OP_SELECT) && res.IsOk() {
-			newDb, err := strconv.Atoi(req.FirstArg())
-			if err == nil {
-				db = newDb
-			}
+			db = req.FirstArgInt()
 		}
 
 		cliConn.WriteMsg(res)

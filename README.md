@@ -5,7 +5,7 @@ Redis Proxy
 Current state
 -------------
 
- - TODO: keep track of SELECTed db, re-select after switch
+ - TODO: reject BROKEN commands
  - TODO: add TLS to listener and admin
  - TODO: add TLS to uplink (including reloads)
  - TODO: keepalive?

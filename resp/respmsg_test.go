@@ -18,7 +18,7 @@ func TestAnalysis(t *testing.T) {
 
 	m := msg("*2\r\n$4\r\nAUTH\r\n$4\r\npass\r\n")
 	assert.Equal(t, m.Op(), MSG_OP_AUTH)
-	assert.Equal(t, m.Password(), "pass")
+	assert.Equal(t, m.FirstArg(), "pass")
 }
 
 func TestHelpers(t *testing.T) {

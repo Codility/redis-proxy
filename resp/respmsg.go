@@ -33,8 +33,9 @@ func (m MessageOp) String() string {
 type Msg struct {
 	data []byte
 
-	op       MessageOp
-	firstArg string
+	op          MessageOp
+	firstArg    string
+	firstArgInt int
 }
 
 func MsgFromStrings(args ...string) *Msg {
@@ -66,15 +67,12 @@ func (m *Msg) Op() MessageOp {
 	return m.op
 }
 
-func (m *Msg) Password() string {
-	if m.op == MSG_OP_AUTH {
-		return m.firstArg
-	}
-	return ""
-}
-
 func (m *Msg) FirstArg() string {
 	return m.firstArg
+}
+
+func (m *Msg) FirstArgInt() int {
+	return m.firstArgInt
 }
 
 func (m *Msg) IsOk() bool {
@@ -96,12 +94,22 @@ func (m *Msg) analyse() {
 		return
 	}
 
-	m.op = MSG_OP_OTHER
+	var suff []byte
 
-	if bytes.EqualFold(m.data[:len(PREFIX_AUTH)], PREFIX_AUTH) {
+	switch {
+	case bytes.EqualFold(m.data[:len(PREFIX_AUTH)], PREFIX_AUTH):
 		m.op = MSG_OP_AUTH
-		suff := m.data[len(PREFIX_AUTH):]
+		suff = m.data[len(PREFIX_AUTH):]
 
+	case bytes.EqualFold(m.data[:len(PREFIX_SELECT)], PREFIX_SELECT):
+		m.op = MSG_OP_SELECT
+		suff = m.data[len(PREFIX_SELECT):]
+
+	default:
+		m.op = MSG_OP_OTHER
+	}
+
+	if (m.op == MSG_OP_AUTH) || (m.op == MSG_OP_SELECT) {
 		end := bytes.IndexByte(suff, '\r')
 		n, err := strconv.Atoi(string(suff[:end]))
 		if err != nil {
@@ -111,16 +119,11 @@ func (m *Msg) analyse() {
 		m.firstArg = string(suff[end+2 : end+2+n])
 	}
 
-	if bytes.EqualFold(m.data[:len(PREFIX_SELECT)], PREFIX_SELECT) {
-		m.op = MSG_OP_SELECT
-		suff := m.data[len(PREFIX_SELECT):]
-
-		end := bytes.IndexByte(suff, '\r')
-		n, err := strconv.Atoi(string(suff[:end]))
+	if m.op == MSG_OP_SELECT {
+		var err error
+		m.firstArgInt, err = strconv.Atoi(m.firstArg)
 		if err != nil {
 			m.op = MSG_OP_BROKEN
-			return
 		}
-		m.firstArg = string(suff[end+2 : end+2+n])
 	}
 }
