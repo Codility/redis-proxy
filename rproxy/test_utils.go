@@ -137,7 +137,7 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 		s.BumpReqCnt()
 
 		resp := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)
-		_, err = rc.WriteMsg(&RespMsg{[]byte(resp)})
+		_, err = rc.WriteMsg(&RespMsg{data: []byte(resp)})
 		if err != nil {
 			panic(err)
 		}

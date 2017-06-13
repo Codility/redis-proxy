@@ -2,7 +2,6 @@ package rproxy
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -47,15 +46,19 @@ func MustRespDial(proto, addr string, readTimeLimitMs int64, log bool) *RespConn
 	return conn
 }
 
-func (rc *RespConn) WriteMsg(msg *RespMsg) (int, error) {
+func (rc *RespConn) Write(data []byte) (int, error) {
 	if rc.log {
-		rc.logMessage(false, msg.data)
+		rc.logMessage(false, data)
 	}
-	res, err := rc.writer.Write(msg.data)
+	res, err := rc.raw.Write(data)
 	if err == nil {
 		rc.writer.Flush()
 	}
-	return res, err
+	return res, nil
+}
+
+func (rc *RespConn) WriteMsg(msg *RespMsg) (int, error) {
+	return rc.Write(msg.data)
 }
 
 func (rc *RespConn) MustWriteMsg(msg *RespMsg) int {
@@ -78,7 +81,7 @@ func (rc *RespConn) ReadMsg() (*RespMsg, error) {
 			rc.logMessage(true, res)
 		}
 	}
-	return &RespMsg{res}, err
+	return &RespMsg{data: res}, err
 }
 
 func (rc *RespConn) MustReadMsg() *RespMsg {
@@ -126,21 +129,4 @@ func (rc *RespConn) logMessage(inbound bool, data []byte) {
 	msgStr = strings.Replace(msgStr, "\r", "\\r", -1)
 
 	log.Printf("%s %s %s", rc.raw.RemoteAddr(), dirStr, msgStr)
-}
-
-////////////////////////////////////////
-// RespMsg
-
-type RespMsg struct {
-	data []byte
-}
-
-func (m *RespMsg) String() string {
-	return string(m.data)
-}
-
-func RespMsgFromStrings(args ...string) *RespMsg {
-	buf := new(bytes.Buffer)
-	resp.NewRESPWriter(buf).WriteCommand(args...)
-	return &RespMsg{buf.Bytes()}
 }
