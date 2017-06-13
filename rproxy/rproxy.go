@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -133,6 +134,7 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 	uplinkConf := &AddrSpec{}
 	var uplinkConn *resp.Conn
 	cliAuthenticated := false
+	db := 0
 
 	defer func() {
 		cliConn.Close()
@@ -184,8 +186,13 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 				}
 
 				if uplinkConf.Pass != "" {
-					err = uplinkConn.Authenticate(uplinkConf.Pass)
-					if err != nil {
+					if err := uplinkConn.Authenticate(uplinkConf.Pass); err != nil {
+						return nil, err
+					}
+				}
+
+				if db != 0 {
+					if err := uplinkConn.Select(db); err != nil {
 						return nil, err
 					}
 				}
@@ -200,6 +207,13 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 		if err != nil {
 			log.Printf("Error: %v\n", err)
 			return
+		}
+
+		if (req.Op() == resp.MSG_OP_SELECT) && res.IsOk() {
+			newDb, err := strconv.Atoi(req.FirstArg())
+			if err == nil {
+				db = newDb
+			}
 		}
 
 		cliConn.WriteMsg(res)

@@ -107,8 +107,12 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 		}
 		s.RecordRequest(req)
 
-		res := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)
-		rc.MustWrite([]byte(res))
+		if (req.Op() == resp.MSG_OP_AUTH) || (req.Op() == resp.MSG_OP_SELECT) {
+			rc.MustWrite([]byte("+OK\r\n"))
+		} else {
+			res := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)
+			rc.MustWrite([]byte(res))
+		}
 	}
 }
 
@@ -124,4 +128,11 @@ func (s *FakeRedisServer) RecordRequest(req *resp.Msg) {
 	defer s.mu.Unlock()
 
 	s.requests = append(s.requests, req)
+}
+
+func (s *FakeRedisServer) LastRequest() *resp.Msg {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.requests[len(s.requests)-1]
 }

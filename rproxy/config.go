@@ -63,6 +63,16 @@ type TestConfig struct {
 	err  error
 }
 
+func NewTestConfig(uplinkAddr string) *TestConfig {
+	return &TestConfig{
+		conf: &ProxyConfig{
+			Uplink: AddrSpec{Addr: uplinkAddr},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	}
+}
+
 func (c *TestConfig) Load() (*ProxyConfig, error) {
 	return c.conf, c.err
 }

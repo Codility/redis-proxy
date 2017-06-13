@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,6 +142,19 @@ func (rc *Conn) Authenticate(pass string) error {
 	if !resp.IsOk() {
 		return fmt.Errorf(
 			"Authentication error: Redis responded with '%s'",
+			resp.String())
+	}
+	return nil
+}
+
+func (rc *Conn) Select(db int) error {
+	resp, err := rc.Call(MsgFromStrings("SELECT", strconv.Itoa(db)))
+	if err != nil {
+		return err
+	}
+	if !resp.IsOk() {
+		return fmt.Errorf(
+			"SELECT error: Redis responded with '%s'",
 			resp.String())
 	}
 	return nil

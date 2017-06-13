@@ -176,3 +176,33 @@ func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 		c.MustCall(resp.MsgFromStrings("SET", "A", "test")).String(),
 		"+OK\r\n")
 }
+
+func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
+	srv_0 := fakeredis.Start("srv-0")
+	defer srv_0.Stop()
+	srv_1 := fakeredis.Start("srv-1")
+	defer srv_1.Stop()
+
+	conf := NewTestConfig(srv_0.Addr().String())
+	proxy := mustStartTestProxy(t, conf)
+	defer proxy.controller.Stop()
+
+	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	c.MustCall(resp.MsgFromStrings("SELECT", "1"))
+
+	// 1. That SELECT message must make it to the server
+	assert.Equal(t, srv_0.ReqCnt(), 1)
+	assert.True(t, srv_0.LastRequest().Equal(resp.MsgFromStrings("SELECT", "1")))
+
+	// 2. Proxy must resend that message after reconnecting, before first request
+	conf.Replace(&ProxyConfig{
+		Uplink: AddrSpec{Addr: srv_1.Addr().String()},
+		Listen: AddrSpec{Addr: "127.0.0.1:0"},
+		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+	})
+	proxy.controller.ReloadAndWait()
+	c.MustCall(resp.MsgFromStrings("SET", "k", "v"))
+
+	assert.Equal(t, srv_1.ReqCnt(), 2)
+	assert.True(t, srv_1.Requests()[0].Equal(resp.MsgFromStrings("SELECT", "1")))
+}
