@@ -2,6 +2,10 @@ package fakeredis
 
 //////////////////////////////////////////////////////////////////////
 // Minimal Redis-like server that exposes RESP via TCP.
+//
+// It responds with:
+//  - "+OK\r\n" to "SELECT n" and "AUTH x"
+//  - its name (as passed to New()) to all other requests
 
 import (
 	"fmt"
@@ -20,7 +24,7 @@ type FakeRedisServer struct {
 
 	mu       sync.Mutex
 	shutdown bool
-	reqCnt   int
+	requests []*resp.Msg
 }
 
 func New(name string) *FakeRedisServer {
@@ -41,7 +45,15 @@ func Start(name string) *FakeRedisServer {
 func (s *FakeRedisServer) IsShuttingDown() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	return s.shutdown
+}
+
+func (s *FakeRedisServer) Requests() []*resp.Msg {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.requests
 }
 
 func (s *FakeRedisServer) Run(startedChan chan struct{}) {
@@ -86,14 +98,14 @@ func (s *FakeRedisServer) Addr() net.Addr {
 func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 	rc := resp.NewConn(conn, 100, false)
 	for !s.IsShuttingDown() {
-		_, err := rc.ReadMsg()
+		req, err := rc.ReadMsg()
 		if err != nil {
 			if resp.IsNetTimeout(err) || (err == io.EOF) {
 				continue
 			}
 			panic(err)
 		}
-		s.BumpReqCnt()
+		s.RecordRequest(req)
 
 		res := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)
 		rc.MustWrite([]byte(res))
@@ -104,12 +116,12 @@ func (s *FakeRedisServer) ReqCnt() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.reqCnt
+	return len(s.requests)
 }
 
-func (s *FakeRedisServer) BumpReqCnt() {
+func (s *FakeRedisServer) RecordRequest(req *resp.Msg) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.reqCnt++
+	s.requests = append(s.requests, req)
 }
