@@ -11,13 +11,13 @@ func msg(content string) *Msg {
 }
 
 func TestAnalysis(t *testing.T) {
-	assert.Equal(t, msg("*1\r\n$7\r\nCOMMAND\r\n").Op(), MSG_OP_OTHER)
-	assert.Equal(t, msg("*1\r\n$7\r\nAUTH\r\n").Op(), MSG_OP_OTHER)
-	assert.Equal(t, msg("*2\r\n$7\r\nAUTH\r\n").Op(), MSG_OP_OTHER)
-	assert.Equal(t, msg("*3\r\n$7\r\nAUTH\r\n$4\r\npass\r\n$14\r\nsomething-else\r\n").Op(), MSG_OP_OTHER)
+	assert.Equal(t, msg("*1\r\n$7\r\nCOMMAND\r\n").Op(), MsgOpOther)
+	assert.Equal(t, msg("*1\r\n$7\r\nAUTH\r\n").Op(), MsgOpOther)
+	assert.Equal(t, msg("*2\r\n$7\r\nAUTH\r\n").Op(), MsgOpOther)
+	assert.Equal(t, msg("*3\r\n$7\r\nAUTH\r\n$4\r\npass\r\n$14\r\nsomething-else\r\n").Op(), MsgOpOther)
 
 	m := msg("*2\r\n$4\r\nAUTH\r\n$4\r\npass\r\n")
-	assert.Equal(t, m.Op(), MSG_OP_AUTH)
+	assert.Equal(t, m.Op(), MsgOpAuth)
 	assert.Equal(t, m.FirstArg(), "pass")
 }
 

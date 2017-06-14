@@ -101,6 +101,9 @@ func (m *Msg) analyse() {
 
 	m.op = MsgOpOther
 	for _, def := range msgPrefixMap {
+		if len(def.prefix) > len(m.data) {
+			continue
+		}
 		if bytes.EqualFold(def.prefix, m.data[:len(def.prefix)]) {
 			m.op = def.op
 

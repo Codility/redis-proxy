@@ -23,7 +23,10 @@ run: redis-proxy config.json
 
 .PHONY: test
 test:
-	./scripts/go test -v gitlab.codility.net/marcink/redis-proxy/rproxy/
+	./scripts/go test -v \
+		gitlab.codility.net/marcink/redis-proxy/fakeredis/ \
+		gitlab.codility.net/marcink/redis-proxy/resp/ \
+		gitlab.codility.net/marcink/redis-proxy/rproxy/
 
 ########################################
 # switch-test and related targets
