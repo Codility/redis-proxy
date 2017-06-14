@@ -52,10 +52,11 @@ func (rc *Conn) Write(data []byte) (int, error) {
 		rc.logMessage(false, data)
 	}
 	res, err := rc.raw.Write(data)
-	if err == nil {
-		rc.writer.Flush()
+	if err != nil {
+		return 0, err
 	}
-	return res, nil
+	err = rc.writer.Flush()
+	return res, err
 }
 
 func (rc *Conn) MustWrite(data []byte) int {

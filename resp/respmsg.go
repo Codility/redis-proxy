@@ -30,6 +30,7 @@ var (
 	MsgNoAuth        = []byte("-NOAUTH Authentication required.\r\n")
 	MsgInvalidPass   = []byte("-ERR invalid password\r\n")
 	MsgNoPasswordSet = []byte("-ERR Client sent AUTH, but no password is set\r\n")
+	MsgParseError    = []byte("-ERR Command parse error (redis-proxy)\r\n")
 )
 
 func (m MessageOp) String() string {
@@ -51,6 +52,10 @@ type Msg struct {
 	op          MessageOp
 	firstArg    string
 	firstArgInt int
+}
+
+func NewMsg(data []byte) *Msg {
+	return &Msg{data: data}
 }
 
 func MsgFromStrings(args ...string) *Msg {

@@ -142,6 +142,11 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 			return
 		}
 
+		if req.Op() == resp.MsgOpBroken {
+			cliConn.Write(resp.MsgParseError)
+			return
+		}
+
 		if req.Op() == resp.MsgOpAuth {
 			if proxy.RequiresClientAuth() {
 				cliAuthenticated = (req.FirstArg() == proxy.config.Listen.Pass)

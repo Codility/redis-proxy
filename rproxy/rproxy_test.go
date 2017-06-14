@@ -1,7 +1,9 @@
 package rproxy
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -205,4 +207,21 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 
 	assert.Equal(t, srv_1.ReqCnt(), 2)
 	assert.True(t, srv_1.Requests()[0].Equal(resp.MsgFromStrings("SELECT", "1")))
+}
+
+func TestProxyKillsConnectionOnBrokenCommands(t *testing.T) {
+	srv := fakeredis.Start("srv")
+	defer srv.Stop()
+
+	proxy := mustStartTestProxy(t, NewTestConfig(srv.Addr().String()))
+	defer proxy.controller.Stop()
+
+	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	resp := c.MustCall(resp.MsgFromStrings("SELECT", "X"))
+	assert.True(t,
+		bytes.Equal(resp.Data(),
+			[]byte("-ERR Command parse error (redis-proxy)\r\n")))
+
+	_, err := c.ReadMsg()
+	assert.Equal(t, err, io.EOF)
 }
