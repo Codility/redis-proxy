@@ -10,20 +10,35 @@ import (
 type MessageOp int
 
 const (
-	MSG_OP_UNCHECKED = MessageOp(iota)
-	MSG_OP_AUTH
-	MSG_OP_SELECT
-	MSG_OP_BROKEN
-	MSG_OP_OTHER
+	MsgOpUnchecked = MessageOp(iota)
+	MsgOpAuth
+	MsgOpSelect
+	MsgOpBroken
+	MsgOpOther
+)
+
+var msgPrefixMap = []struct {
+	prefix []byte
+	op     MessageOp
+}{
+	{[]byte("*2\r\n$4\r\nAUTH\r\n$"), MsgOpAuth},
+	{[]byte("*2\r\n$6\r\nSELECT\r\n$"), MsgOpSelect},
+}
+
+var (
+	MsgOk            = []byte("+OK\r\n")
+	MsgNoAuth        = []byte("-NOAUTH Authentication required.\r\n")
+	MsgInvalidPass   = []byte("-ERR invalid password\r\n")
+	MsgNoPasswordSet = []byte("-ERR Client sent AUTH, but no password is set\r\n")
 )
 
 func (m MessageOp) String() string {
 	switch m {
-	case MSG_OP_AUTH:
+	case MsgOpAuth:
 		return "AUTH"
-	case MSG_OP_SELECT:
+	case MsgOpSelect:
 		return "SELECT"
-	case MSG_OP_OTHER:
+	case MsgOpOther:
 		return "OTHER"
 	default:
 		return "?"
@@ -76,26 +91,16 @@ func (m *Msg) FirstArgInt() int {
 }
 
 func (m *Msg) IsOk() bool {
-	return bytes.Equal(m.data, MSG_DATA_OK)
+	return bytes.Equal(m.data, MsgOk)
 }
-
-var MSG_PREFIX_MAP = []struct {
-	prefix []byte
-	op     MessageOp
-}{
-	{[]byte("*2\r\n$4\r\nAUTH\r\n$"), MSG_OP_AUTH},
-	{[]byte("*2\r\n$6\r\nSELECT\r\n$"), MSG_OP_SELECT},
-}
-
-var MSG_DATA_OK = []byte("+OK\r\n")
 
 func (m *Msg) analyse() {
-	if m.op != MSG_OP_UNCHECKED {
+	if m.op != MsgOpUnchecked {
 		return
 	}
 
-	m.op = MSG_OP_OTHER
-	for _, def := range MSG_PREFIX_MAP {
+	m.op = MsgOpOther
+	for _, def := range msgPrefixMap {
 		if bytes.EqualFold(def.prefix, m.data[:len(def.prefix)]) {
 			m.op = def.op
 
@@ -103,18 +108,18 @@ func (m *Msg) analyse() {
 			end := bytes.IndexByte(suff, '\r')
 			n, err := strconv.Atoi(string(suff[:end]))
 			if err != nil {
-				m.op = MSG_OP_BROKEN
+				m.op = MsgOpBroken
 				return
 			}
 			m.firstArg = string(suff[end+2 : end+2+n])
 		}
 	}
 
-	if m.op == MSG_OP_SELECT {
+	if m.op == MsgOpSelect {
 		var err error
 		m.firstArgInt, err = strconv.Atoi(m.firstArg)
 		if err != nil {
-			m.op = MSG_OP_BROKEN
+			m.op = MsgOpBroken
 		}
 	}
 }

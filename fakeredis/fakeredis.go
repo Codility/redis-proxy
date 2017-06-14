@@ -107,7 +107,7 @@ func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 		}
 		s.RecordRequest(req)
 
-		if (req.Op() == resp.MSG_OP_AUTH) || (req.Op() == resp.MSG_OP_SELECT) {
+		if (req.Op() == resp.MsgOpAuth) || (req.Op() == resp.MsgOpSelect) {
 			rc.MustWrite([]byte("+OK\r\n"))
 		} else {
 			res := fmt.Sprintf("$%d\r\n%s\r\n", len(s.name), s.name)

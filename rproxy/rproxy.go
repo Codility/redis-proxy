@@ -120,13 +120,6 @@ func (proxy *Proxy) verifyNewConfig(newConfig *ProxyConfig) error {
 	return nil
 }
 
-const (
-	ERR_OK              = "+OK\r\n"
-	ERR_NOAUTH          = "-NOAUTH Authentication required.\r\n"
-	ERR_INVALID_PASS    = "-ERR invalid password\r\n"
-	ERR_NO_PASSWORD_SET = "-ERR Client sent AUTH, but no password is set\r\n"
-)
-
 func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
 
@@ -149,22 +142,22 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 			return
 		}
 
-		if req.Op() == resp.MSG_OP_AUTH {
+		if req.Op() == resp.MsgOpAuth {
 			if proxy.RequiresClientAuth() {
 				cliAuthenticated = (req.FirstArg() == proxy.config.Listen.Pass)
 				if cliAuthenticated {
-					cliConn.Write([]byte(ERR_OK))
+					cliConn.Write([]byte(resp.MsgOk))
 				} else {
-					cliConn.Write([]byte(ERR_INVALID_PASS))
+					cliConn.Write([]byte(resp.MsgInvalidPass))
 				}
 			} else {
-				cliConn.Write([]byte(ERR_NO_PASSWORD_SET))
+				cliConn.Write([]byte(resp.MsgNoPasswordSet))
 			}
 			continue
 		}
 
 		if proxy.RequiresClientAuth() && !cliAuthenticated {
-			cliConn.Write([]byte(ERR_NOAUTH))
+			cliConn.Write([]byte(resp.MsgNoAuth))
 			continue
 		}
 
@@ -208,7 +201,7 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 			return
 		}
 
-		if (req.Op() == resp.MSG_OP_SELECT) && res.IsOk() {
+		if (req.Op() == resp.MsgOpSelect) && res.IsOk() {
 			db = req.FirstArgInt()
 		}
 
