@@ -13,7 +13,7 @@ import (
 	"gitlab.codility.net/marcink/redis-proxy/resp"
 )
 
-const BASE_TEST_REDIS_PORT = 7300
+const BaseTestRedisPort = 7300
 
 func TestProxy(t *testing.T) {
 	srv := fakeredis.Start("fake")
@@ -155,11 +155,11 @@ func mustStartRedisServer(port int, args ...string) *exec.Cmd {
 
 func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 	redis := mustStartRedisServer(
-		BASE_TEST_REDIS_PORT,
+		BaseTestRedisPort,
 		"--requirepass", "test-pass")
 	defer redis.Process.Kill()
 
-	redisUrl := fmt.Sprintf("localhost:%d", BASE_TEST_REDIS_PORT)
+	redisUrl := fmt.Sprintf("localhost:%d", BaseTestRedisPort)
 	conf := &TestConfig{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: redisUrl, Pass: "test-pass"},

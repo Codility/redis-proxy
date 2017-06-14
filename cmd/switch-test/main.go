@@ -14,21 +14,21 @@ import (
 )
 
 const (
-	PROXY_A_PORT  = 7101
-	PROXY_A_ADMIN = 7102
+	ProxyAPort  = 7101
+	ProxyAAdmin = 7102
 
-	PROXY_B_PORT  = 7201
-	PROXY_B_ADMIN = 7202
+	ProxyBPort  = 7201
+	ProxyBAdmin = 7202
 
-	REDIS_A_PORT = 6001
-	REDIS_B_PORT = 6002
+	RedisAPort = 6001
+	RedisBPort = 6002
 )
 
 func main() {
 	log.SetFlags(log.Ltime)
 
-	proxy_a := NewProxy("tmp/conf-a.json", PROXY_A_PORT, PROXY_A_ADMIN, REDIS_A_PORT)
-	proxy_b := NewProxy("tmp/conf-b.json", PROXY_B_PORT, PROXY_B_ADMIN, PROXY_A_PORT)
+	proxy_a := NewProxy("tmp/conf-a.json", ProxyAPort, ProxyAAdmin, RedisAPort)
+	proxy_b := NewProxy("tmp/conf-b.json", ProxyBPort, ProxyBAdmin, ProxyAPort)
 
 	proxy_a.Start()
 	defer proxy_a.Stop()
@@ -36,11 +36,11 @@ func main() {
 	proxy_b.Start()
 	defer proxy_b.Stop()
 
-	redis_a := NewRedis(REDIS_A_PORT)
+	redis_a := NewRedis(RedisAPort)
 	redis_a.Start()
 	defer redis_a.Stop()
 
-	redis_b := NewRedis(REDIS_B_PORT)
+	redis_b := NewRedis(RedisBPort)
 	defer redis_b.Stop()
 
 	go statusLoop()
@@ -65,9 +65,9 @@ func main() {
 		redis_b.SlaveOf(nil)
 		redis_a.Stop()
 
-		proxy_b.LinkTo(REDIS_B_PORT)
+		proxy_b.LinkTo(RedisBPort)
 		time.Sleep(time.Second)
-		proxy_a.LinkTo(PROXY_B_PORT)
+		proxy_a.LinkTo(ProxyBPort)
 
 		log.Print("Done switching to Redis B")
 
@@ -86,9 +86,9 @@ func main() {
 		redis_a.SlaveOf(nil)
 		redis_b.Stop()
 
-		proxy_a.LinkTo(REDIS_A_PORT)
+		proxy_a.LinkTo(RedisAPort)
 		time.Sleep(time.Second)
-		proxy_b.LinkTo(PROXY_A_PORT)
+		proxy_b.LinkTo(ProxyAPort)
 
 		log.Print("Done switching to Redis A")
 	}
@@ -103,8 +103,8 @@ func statusLoop() {
 
 func logStatus() {
 	log.Printf("A: %s;  B: %s\n",
-		getStatus(PROXY_A_ADMIN),
-		getStatus(PROXY_B_ADMIN))
+		getStatus(ProxyAAdmin),
+		getStatus(ProxyBAdmin))
 }
 
 func getStatus(adminPort int) string {
