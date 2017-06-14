@@ -5,16 +5,12 @@ Redis Proxy
 Current state
 -------------
 
- - TODO: reject BROKEN commands
  - TODO: add TLS to listener and admin
  - TODO: add TLS to uplink (including reloads)
- - TODO: keepalive?
- - TODO: get rid of circular dependency between RedisProxy and ProxyController
-
- - TODO: switch-test: wait for replication to really catch up
- - TODO: move switchover logic to proxy (old proxy can handle the entire process)
  - TODO: better config file validation (require minimal set of values)
  - TODO: verify connection to new Redis before reloading config
+ - TODO: switch-test: wait for replication to really catch up
+ - TODO: move switchover logic to proxy (old proxy can handle the entire process)
 
 
 Possible optimizations
