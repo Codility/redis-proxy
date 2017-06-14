@@ -11,27 +11,27 @@ func TestControllerStartStop(t *testing.T) {
 	contr := NewProxyController()
 	ch := &TestConfigHolder{}
 
-	assert.Equal(t, contr.GetInfo().State, PROXY_STOPPED)
+	assert.Equal(t, contr.GetInfo().State, ProxyStopped)
 
 	contr.Start(ch)
-	assert.Equal(t, contr.GetInfo().State, PROXY_RUNNING)
+	assert.Equal(t, contr.GetInfo().State, ProxyRunning)
 
 	contr.Stop()
-	assert.Equal(t, contr.GetInfo().State, PROXY_STOPPED)
+	assert.Equal(t, contr.GetInfo().State, ProxyStopped)
 }
 
 func TestControllerPause(t *testing.T) {
 	contr := NewProxyController()
 	contr.Start(&TestConfigHolder{})
 	defer contr.Stop()
-	assert.Equal(t, contr.GetInfo().State, PROXY_RUNNING)
+	assert.Equal(t, contr.GetInfo().State, ProxyRunning)
 
-	// in PROXY_RUNNING: requests are executed immediately
+	// in ProxyRunning: requests are executed immediately
 	r0 := NewTestRequest(contr, func() {})
 	go r0.Do()
 	waitUntil(t, func() bool { return r0.done })
 
-	// in PROXY_PAUSED: requests are queued
+	// in ProxyPaused: requests are queued
 	r1 := NewTestRequest(contr, func() {})
 	contr.PauseAndWait() // --------------- pause starts
 	go r1.Do()
@@ -41,7 +41,7 @@ func TestControllerPause(t *testing.T) {
 	assert.Equal(t, contr.GetInfo().WaitingRequests, 1)
 	assert.False(t, r1.done)
 
-	// back to PROXY_RUNNING: queued requests get executed
+	// back to ProxyRunning: queued requests get executed
 	contr.Unpause() // --------------- pause ends
 	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 0 })
 	waitUntil(t, func() bool { return r1.done })
@@ -95,11 +95,11 @@ func TestControllerPauseDuringActiveRequests(t *testing.T) {
 	waitUntil(t, func() bool { return contr.GetInfo().WaitingRequests == 1 })
 
 	assert.Equal(t, contr.GetInfo().ActiveRequests, 1)
-	assert.Equal(t, contr.GetInfo().State, PROXY_PAUSING)
+	assert.Equal(t, contr.GetInfo().State, ProxyPausing)
 	assert.True(t, reqStartedBeforePauseWorking)
 
 	finish <- struct{}{}
-	waitUntil(t, func() bool { return contr.GetInfo().State == PROXY_PAUSED })
+	waitUntil(t, func() bool { return contr.GetInfo().State == ProxyPaused })
 	assert.Equal(t, contr.GetInfo().ActiveRequests, 0)
 	assert.Equal(t, contr.GetInfo().WaitingRequests, 1)
 	assert.False(t, reqStartedBeforePauseWorking)
@@ -124,12 +124,12 @@ func TestControllerReloadWaitsForPause(t *testing.T) {
 	waitUntil(t, func() bool { return executing == 1 })
 
 	contr.Reload()
-	assert.Equal(t, contr.GetInfo().State, PROXY_RELOADING)
+	assert.Equal(t, contr.GetInfo().State, ProxyReloading)
 	assert.Equal(t, ch.ReloadConfigCallCnt, 0)
 
 	finish <- struct{}{}
 
 	waitUntil(t, func() bool { return executing == 0 })
-	assert.Equal(t, contr.GetInfo().State, PROXY_RUNNING)
+	assert.Equal(t, contr.GetInfo().State, ProxyRunning)
 	assert.Equal(t, ch.ReloadConfigCallCnt, 1)
 }

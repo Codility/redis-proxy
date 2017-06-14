@@ -20,8 +20,8 @@ type ProxyControllerProc struct {
 func NewProxyControllerProc(confHolder ProxyConfigHolder) *ProxyControllerProc {
 	return &ProxyControllerProc{
 		channels: ProxyControllerChannels{
-			requestPermission: make(chan chan struct{}, MAX_CONNECTIONS),
-			releasePermission: make(chan struct{}, MAX_CONNECTIONS),
+			requestPermission: make(chan chan struct{}, MaxConnections),
+			releasePermission: make(chan struct{}, MaxConnections),
 			info:              make(chan chan *ControllerInfo),
 			command:           make(chan ControllerCommand),
 		},
@@ -30,43 +30,43 @@ func NewProxyControllerProc(confHolder ProxyConfigHolder) *ProxyControllerProc {
 }
 
 func (p *ProxyControllerProc) run() {
-	p.state = PROXY_RUNNING
+	p.state = ProxyRunning
 
 	channelMap := map[ControllerState]*ProxyControllerChannels{
-		PROXY_RUNNING: &p.channels,
-		PROXY_PAUSING: &ProxyControllerChannels{
+		ProxyRunning: &p.channels,
+		ProxyPausing: &ProxyControllerChannels{
 			requestPermission: nil,
 			releasePermission: p.channels.releasePermission,
 			info:              p.channels.info,
 			command:           nil},
-		PROXY_RELOADING: &ProxyControllerChannels{
+		ProxyReloading: &ProxyControllerChannels{
 			requestPermission: nil,
 			releasePermission: p.channels.releasePermission,
 			info:              p.channels.info,
 			command:           nil},
-		PROXY_PAUSED: &ProxyControllerChannels{
+		ProxyPaused: &ProxyControllerChannels{
 			requestPermission: nil,
 			releasePermission: nil,
 			info:              p.channels.info,
 			command:           p.channels.command},
 	}
 
-	for p.state != PROXY_STOPPING {
+	for p.state != ProxyStopping {
 		switch p.state {
-		case PROXY_RUNNING:
+		case ProxyRunning:
 			// nothing
-		case PROXY_PAUSING:
+		case ProxyPausing:
 			if p.activeRequests == 0 {
-				p.state = PROXY_PAUSED
+				p.state = ProxyPaused
 				continue
 			}
-		case PROXY_RELOADING:
+		case ProxyReloading:
 			if p.activeRequests == 0 {
 				p.confHolder.ReloadConfig()
-				p.state = PROXY_RUNNING
+				p.state = ProxyRunning
 				continue
 			}
-		case PROXY_PAUSED:
+		case ProxyPaused:
 			// nothing
 		}
 		p.handleChannels(channelMap[p.state])
@@ -90,14 +90,14 @@ func (p *ProxyControllerProc) handleChannels(channels *ProxyControllerChannels) 
 
 	case cmd := <-channels.command:
 		switch cmd {
-		case CMD_PAUSE:
-			p.state = PROXY_PAUSING
-		case CMD_UNPAUSE:
-			p.state = PROXY_RUNNING
-		case CMD_RELOAD:
-			p.state = PROXY_RELOADING
-		case CMD_STOP:
-			p.state = PROXY_STOPPING
+		case CmdPause:
+			p.state = ProxyPausing
+		case CmdUnpause:
+			p.state = ProxyRunning
+		case CmdReload:
+			p.state = ProxyReloading
+		case CmdStop:
+			p.state = ProxyStopping
 		default:
 			log.Print("Unknown controller command:", cmd)
 		}

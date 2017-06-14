@@ -11,19 +11,24 @@ import (
 // ProxyController interface
 
 const (
-	PROXY_STOPPED = ControllerState(iota)
-	PROXY_RUNNING
-	PROXY_PAUSING
-	PROXY_PAUSED
-	PROXY_RELOADING
-	PROXY_STOPPING
+	ProxyStopped = ControllerState(iota)
+	ProxyRunning
+	ProxyPausing
+	ProxyPaused
+	ProxyReloading
+	ProxyStopping
 
-	CMD_PAUSE = ControllerCommand(iota)
-	CMD_UNPAUSE
-	CMD_RELOAD
-	CMD_STOP
+	CmdPause = ControllerCommand(iota)
+	CmdUnpause
+	CmdReload
+	CmdStop
 
-	MAX_CONNECTIONS = 1000
+	// MaxConnections: not enforced, used only to ensure enough
+	// space in request/release channels to make it easy to
+	// measure current state.
+	//
+	// TODO: enforce?
+	MaxConnections = 1000
 )
 
 type ProxyController struct {
@@ -35,15 +40,15 @@ type ControllerCommand int
 
 func (state ControllerState) String() string {
 	switch state {
-	case PROXY_RUNNING:
+	case ProxyRunning:
 		return "running"
-	case PROXY_PAUSING:
+	case ProxyPausing:
 		return "pausing"
-	case PROXY_PAUSED:
+	case ProxyPaused:
 		return "paused"
-	case PROXY_RELOADING:
+	case ProxyReloading:
 		return "reloading"
-	case PROXY_STOPPING:
+	case ProxyStopping:
 		return "stopping"
 	default:
 		return "unknown:" + strconv.Itoa(int(state))
@@ -70,7 +75,7 @@ func (controller *ProxyController) CallUplink(block func() (*resp.Msg, error)) (
 
 func (controller *ProxyController) GetInfo() *ControllerInfo {
 	if controller.proc == nil {
-		return &ControllerInfo{State: PROXY_STOPPED}
+		return &ControllerInfo{State: ProxyStopped}
 	}
 	ch := make(chan *ControllerInfo)
 	controller.proc.channels.info <- ch
@@ -78,13 +83,13 @@ func (controller *ProxyController) GetInfo() *ControllerInfo {
 }
 
 func (controller *ProxyController) Pause() {
-	controller.proc.channels.command <- CMD_PAUSE
+	controller.proc.channels.command <- CmdPause
 }
 
 func (controller *ProxyController) PauseAndWait() {
 	// TODO: push the state change instead of having the client
 	// poll
-	controller.proc.channels.command <- CMD_PAUSE
+	controller.proc.channels.command <- CmdPause
 	for {
 		if controller.GetInfo().ActiveRequests == 0 {
 			return
@@ -94,17 +99,17 @@ func (controller *ProxyController) PauseAndWait() {
 }
 
 func (controller *ProxyController) Unpause() {
-	controller.proc.channels.command <- CMD_UNPAUSE
+	controller.proc.channels.command <- CmdUnpause
 }
 
 func (controller *ProxyController) Reload() {
-	controller.proc.channels.command <- CMD_RELOAD
+	controller.proc.channels.command <- CmdReload
 }
 
 func (controller *ProxyController) ReloadAndWait() {
 	controller.Reload()
 	for {
-		if controller.GetInfo().State == PROXY_RUNNING {
+		if controller.GetInfo().State == ProxyRunning {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -114,7 +119,7 @@ func (controller *ProxyController) ReloadAndWait() {
 func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 	go controller.run(ch)
 	for {
-		if controller.GetInfo().State == PROXY_RUNNING {
+		if controller.GetInfo().State == ProxyRunning {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -122,7 +127,7 @@ func (controller *ProxyController) Start(ch ProxyConfigHolder) {
 }
 
 func (controller *ProxyController) Stop() {
-	controller.proc.channels.command <- CMD_STOP
+	controller.proc.channels.command <- CmdStop
 	for {
 		if controller.proc == nil {
 			return
