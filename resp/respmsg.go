@@ -17,6 +17,18 @@ const (
 	MsgOpOther
 )
 
+var msgOps = [...]string{
+	"unchecked",
+	"auth",
+	"select",
+	"-broken-",
+	"-other-",
+}
+
+func (m MessageOp) String() string {
+	return msgOps[m]
+}
+
 var msgPrefixMap = []struct {
 	prefix []byte
 	op     MessageOp
@@ -32,19 +44,6 @@ var (
 	MsgNoPasswordSet = []byte("-ERR Client sent AUTH, but no password is set\r\n")
 	MsgParseError    = []byte("-ERR Command parse error (redis-proxy)\r\n")
 )
-
-func (m MessageOp) String() string {
-	switch m {
-	case MsgOpAuth:
-		return "AUTH"
-	case MsgOpSelect:
-		return "SELECT"
-	case MsgOpOther:
-		return "OTHER"
-	default:
-		return "?"
-	}
-}
 
 type Msg struct {
 	data []byte

@@ -28,7 +28,6 @@ type ProxyConfig struct {
 
 type ConfigLoader interface {
 	Load() (*ProxyConfig, error)
-	String() string
 }
 
 ////////////////////////////////////////
@@ -51,10 +50,6 @@ func (f *FileConfig) Load() (*ProxyConfig, error) {
 	return &config, json.Unmarshal(configJson, &config)
 }
 
-func (f *FileConfig) String() string {
-	return f.fileName
-}
-
 ////////////////////////////////////////
 // TestConfig
 
@@ -75,10 +70,6 @@ func NewTestConfig(uplinkAddr string) *TestConfig {
 
 func (c *TestConfig) Load() (*ProxyConfig, error) {
 	return c.conf, c.err
-}
-
-func (c *TestConfig) String() string {
-	return "<const config>"
 }
 
 func (c *TestConfig) Replace(conf *ProxyConfig) {

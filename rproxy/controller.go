@@ -1,7 +1,6 @@
 package rproxy
 
 import (
-	"strconv"
 	"time"
 
 	"gitlab.codility.net/marcink/redis-proxy/resp"
@@ -38,21 +37,16 @@ type ProxyController struct {
 type ControllerState int
 type ControllerCommand int
 
-func (state ControllerState) String() string {
-	switch state {
-	case ProxyRunning:
-		return "running"
-	case ProxyPausing:
-		return "pausing"
-	case ProxyPaused:
-		return "paused"
-	case ProxyReloading:
-		return "reloading"
-	case ProxyStopping:
-		return "stopping"
-	default:
-		return "unknown:" + strconv.Itoa(int(state))
-	}
+var controllerStateTxt = [...]string{
+	"stopped",
+	"running",
+	"pausing",
+	"reloading",
+	"stopping",
+}
+
+func (s ControllerState) String() string {
+	return controllerStateTxt[s]
 }
 
 type ControllerInfo struct {
