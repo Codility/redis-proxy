@@ -79,44 +79,35 @@ func (m *Msg) IsOk() bool {
 	return bytes.Equal(m.data, MSG_DATA_OK)
 }
 
-var PREFIX_AUTH []byte
-var PREFIX_SELECT []byte
-var MSG_DATA_OK []byte
-
-func init() {
-	PREFIX_AUTH = []byte("*2\r\n$4\r\nAUTH\r\n$")
-	PREFIX_SELECT = []byte("*2\r\n$6\r\nSELECT\r\n$")
-	MSG_DATA_OK = []byte("+OK\r\n")
+var MSG_PREFIX_MAP = []struct {
+	prefix []byte
+	op     MessageOp
+}{
+	{[]byte("*2\r\n$4\r\nAUTH\r\n$"), MSG_OP_AUTH},
+	{[]byte("*2\r\n$6\r\nSELECT\r\n$"), MSG_OP_SELECT},
 }
+
+var MSG_DATA_OK = []byte("+OK\r\n")
 
 func (m *Msg) analyse() {
 	if m.op != MSG_OP_UNCHECKED {
 		return
 	}
 
-	var suff []byte
+	m.op = MSG_OP_OTHER
+	for _, def := range MSG_PREFIX_MAP {
+		if bytes.EqualFold(def.prefix, m.data[:len(def.prefix)]) {
+			m.op = def.op
 
-	switch {
-	case bytes.EqualFold(m.data[:len(PREFIX_AUTH)], PREFIX_AUTH):
-		m.op = MSG_OP_AUTH
-		suff = m.data[len(PREFIX_AUTH):]
-
-	case bytes.EqualFold(m.data[:len(PREFIX_SELECT)], PREFIX_SELECT):
-		m.op = MSG_OP_SELECT
-		suff = m.data[len(PREFIX_SELECT):]
-
-	default:
-		m.op = MSG_OP_OTHER
-	}
-
-	if (m.op == MSG_OP_AUTH) || (m.op == MSG_OP_SELECT) {
-		end := bytes.IndexByte(suff, '\r')
-		n, err := strconv.Atoi(string(suff[:end]))
-		if err != nil {
-			m.op = MSG_OP_BROKEN
-			return
+			suff := m.data[len(def.prefix):]
+			end := bytes.IndexByte(suff, '\r')
+			n, err := strconv.Atoi(string(suff[:end]))
+			if err != nil {
+				m.op = MSG_OP_BROKEN
+				return
+			}
+			m.firstArg = string(suff[end+2 : end+2+n])
 		}
-		m.firstArg = string(suff[end+2 : end+2+n])
 	}
 
 	if m.op == MSG_OP_SELECT {
