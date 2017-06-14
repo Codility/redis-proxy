@@ -16,13 +16,26 @@ func TestAnalysis(t *testing.T) {
 	assert.Equal(t, msg("*2\r\n$7\r\nAUTH\r\n").Op(), MsgOpOther)
 	assert.Equal(t, msg("*3\r\n$7\r\nAUTH\r\n$4\r\npass\r\n$14\r\nsomething-else\r\n").Op(), MsgOpOther)
 
-	m := msg("*2\r\n$4\r\nAUTH\r\n$4\r\npass\r\n")
-	assert.Equal(t, m.Op(), MsgOpAuth)
-	assert.Equal(t, m.FirstArg(), "pass")
+	mAuth := msg("*2\r\n$4\r\nAUTH\r\n$4\r\npass\r\n")
+	assert.Equal(t, mAuth.Op(), MsgOpAuth)
+	assert.Equal(t, mAuth.FirstArg(), "pass")
+
+	mAuthBroken := msg("*2\r\n$4\r\nAUTH\r\n$blah")
+	assert.Equal(t, mAuthBroken.Op(), MsgOpBroken)
+	assert.Equal(t, mAuthBroken.FirstArg(), "")
+
+	mSelect := msg("*2\r\n$6\r\nSELECT\r\n$1\r\n2\r\n")
+	assert.Equal(t, mSelect.Op(), MsgOpSelect)
+	assert.Equal(t, mSelect.FirstArg(), "2")
+	assert.Equal(t, mSelect.FirstArgInt(), 2)
+
+	mSelectBroken := msg("*2\r\n$6\r\nSELECT\r\n$1\r\nX\r\n")
+	assert.Equal(t, mSelectBroken.Op(), MsgOpBroken)
+	assert.Equal(t, mSelectBroken.FirstArg(), "")
 }
 
 func TestHelpers(t *testing.T) {
 	assert.True(t, msg("+OK\r\n").IsOk())
-	assert.True(t, !msg("+OK\r").IsOk())
-	assert.True(t, !msg("-ERR some error\r\n").IsOk())
+	assert.False(t, msg("+OK\r").IsOk())
+	assert.False(t, msg("-ERR some error\r\n").IsOk())
 }

@@ -109,6 +109,10 @@ func (m *Msg) analyse() {
 
 			suff := m.data[len(def.prefix):]
 			end := bytes.IndexByte(suff, '\r')
+			if end == -1 {
+				m.op = MsgOpBroken
+				return
+			}
 			n, err := strconv.Atoi(string(suff[:end]))
 			if err != nil {
 				m.op = MsgOpBroken
@@ -123,6 +127,7 @@ func (m *Msg) analyse() {
 		m.firstArgInt, err = strconv.Atoi(m.firstArg)
 		if err != nil {
 			m.op = MsgOpBroken
+			m.firstArg = ""
 		}
 	}
 }
