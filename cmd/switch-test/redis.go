@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os/exec"
 	"strconv"
@@ -35,7 +36,7 @@ func (r *Redis) Start() {
 
 	rdbFile := fmt.Sprintf("save-%d-%d.rdb", r.port, time.Now().Unix())
 	args := []string{
-		"../redis.conf",
+		"-",
 		"--dbfilename", rdbFile,
 		"--requirepass", r.Pass(),
 		"--port", strconv.Itoa(r.port),
@@ -44,11 +45,18 @@ func (r *Redis) Start() {
 	handleProcessOutput(r.cmd, fmt.Sprintf("[Redis-%d:stdout]", r.port), fmt.Sprintf("[Redis-%d:stderr]", r.port))
 	r.cmd.Dir = "tmp/"
 
+	stdin, err := r.cmd.StdinPipe()
+	if err != nil {
+		panic(err)
+	}
+	defer stdin.Close()
+
 	log.Printf("Starting redis-server %v", args)
 
 	if err := r.cmd.Start(); err != nil {
 		panic(err)
 	}
+	io.WriteString(stdin, "loglevel debug\n")
 }
 
 func (r *Redis) Stop() {
