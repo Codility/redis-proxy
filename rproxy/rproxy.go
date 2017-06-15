@@ -2,7 +2,6 @@ package rproxy
 
 import (
 	"errors"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -63,7 +62,8 @@ func (proxy *Proxy) Run() error {
 			}
 			return err
 		} else {
-			go proxy.handleClient(resp.NewConn(conn, 0, proxy.config.LogMessages))
+			ch := NewCliHandler(resp.NewConn(conn, 0, proxy.config.LogMessages), proxy)
+			go ch.Handle()
 		}
 	}
 	return nil
@@ -119,100 +119,4 @@ func (proxy *Proxy) verifyNewConfig(newConfig *ProxyConfig) error {
 		return errors.New("New config must have the same `admin` block as the old one.")
 	}
 	return nil
-}
-
-func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
-	log.Printf("Handling new client: connection from %s", cliConn.RemoteAddr())
-
-	uplinkConf := &AddrSpec{}
-	var uplinkConn *resp.Conn
-	cliAuthenticated := false
-	db := 0
-
-	defer func() {
-		cliConn.Close()
-		if uplinkConn != nil {
-			uplinkConn.Close()
-		}
-	}()
-
-	for {
-		req, err := cliConn.ReadMsg()
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("Read error: %v\n", err)
-			}
-			return
-		}
-
-		if req.Op() == resp.MsgOpBroken {
-			cliConn.Write(resp.MsgParseError)
-			return
-		}
-
-		if req.Op() == resp.MsgOpAuth {
-			if proxy.RequiresClientAuth() {
-				cliAuthenticated = (req.FirstArg() == proxy.config.Listen.Pass)
-				if cliAuthenticated {
-					cliConn.Write([]byte(resp.MsgOk))
-				} else {
-					cliConn.Write([]byte(resp.MsgInvalidPass))
-				}
-			} else {
-				cliConn.Write([]byte(resp.MsgNoPasswordSet))
-			}
-			continue
-		}
-
-		if proxy.RequiresClientAuth() && !cliAuthenticated {
-			cliConn.Write([]byte(resp.MsgNoAuth))
-			continue
-		}
-
-		res, err := proxy.controller.CallUplink(func() (*resp.Msg, error) {
-			config := proxy.config
-			currUplinkConf := &config.Uplink
-			if !uplinkConf.Equal(currUplinkConf) {
-				uplinkConf = currUplinkConf
-				if uplinkConn != nil {
-					uplinkConn.Close()
-				}
-				uplinkConn, err = resp.Dial("tcp", uplinkConf.Addr,
-					config.ReadTimeLimitMs,
-					config.LogMessages,
-				)
-				if err != nil {
-					return nil, err
-				}
-
-				if uplinkConf.Pass != "" {
-					if err := uplinkConn.Authenticate(uplinkConf.Pass); err != nil {
-						return nil, err
-					}
-				}
-
-				if db != 0 {
-					if err := uplinkConn.Select(db); err != nil {
-						return nil, err
-					}
-				}
-			}
-
-			_, err := uplinkConn.WriteMsg(req)
-			if err != nil {
-				return nil, err
-			}
-			return uplinkConn.ReadMsg()
-		})
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			return
-		}
-
-		if (req.Op() == resp.MsgOpSelect) && res.IsOk() {
-			db = req.FirstArgInt()
-		}
-
-		cliConn.WriteMsg(res)
-	}
 }
