@@ -63,7 +63,7 @@ func (proxy *Proxy) Run() error {
 			return err
 		} else {
 			ch := NewCliHandler(resp.NewConn(conn, 0, proxy.config.LogMessages), proxy)
-			go ch.Handle()
+			go ch.Run()
 		}
 	}
 	return nil
