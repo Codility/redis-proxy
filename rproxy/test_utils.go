@@ -51,7 +51,7 @@ func (r *TestRequest) Do() {
 ////////////////////////////////////////
 // Other plumbing
 
-func mustStartTestProxy(t *testing.T, conf *TestConfig) *Proxy {
+func mustStartTestProxy(t *testing.T, conf *TestConfigLoader) *Proxy {
 	proxy, err := NewProxy(conf)
 	assert.Nil(t, err)
 	assert.False(t, proxy.Alive())

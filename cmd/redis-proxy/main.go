@@ -12,7 +12,7 @@ var (
 
 func main() {
 	flag.Parse()
-	proxy, err := rproxy.NewProxy(rproxy.NewFileConfig(*config_file))
+	proxy, err := rproxy.NewProxy(rproxy.NewFileConfigLoader(*config_file))
 	if err != nil {
 		panic(err)
 	}

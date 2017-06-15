@@ -31,17 +31,17 @@ type ConfigLoader interface {
 }
 
 ////////////////////////////////////////
-// FileConfig
+// FileConfigLoader
 
-type FileConfig struct {
+type FileConfigLoader struct {
 	fileName string
 }
 
-func NewFileConfig(name string) *FileConfig {
-	return &FileConfig{name}
+func NewFileConfigLoader(name string) *FileConfigLoader {
+	return &FileConfigLoader{name}
 }
 
-func (f *FileConfig) Load() (*ProxyConfig, error) {
+func (f *FileConfigLoader) Load() (*ProxyConfig, error) {
 	configJson, err := ioutil.ReadFile(f.fileName)
 	if err != nil {
 		return nil, err
@@ -51,15 +51,15 @@ func (f *FileConfig) Load() (*ProxyConfig, error) {
 }
 
 ////////////////////////////////////////
-// TestConfig
+// TestConfigLoader
 
-type TestConfig struct {
+type TestConfigLoader struct {
 	conf *ProxyConfig
 	err  error
 }
 
-func NewTestConfig(uplinkAddr string) *TestConfig {
-	return &TestConfig{
+func NewTestConfigLoader(uplinkAddr string) *TestConfigLoader {
+	return &TestConfigLoader{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: uplinkAddr},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
@@ -68,10 +68,10 @@ func NewTestConfig(uplinkAddr string) *TestConfig {
 	}
 }
 
-func (c *TestConfig) Load() (*ProxyConfig, error) {
+func (c *TestConfigLoader) Load() (*ProxyConfig, error) {
 	return c.conf, c.err
 }
 
-func (c *TestConfig) Replace(conf *ProxyConfig) {
+func (c *TestConfigLoader) Replace(conf *ProxyConfig) {
 	c.conf = conf
 }

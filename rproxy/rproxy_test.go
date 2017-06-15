@@ -21,7 +21,7 @@ func TestProxy(t *testing.T) {
 	srv := fakeredis.Start("fake")
 	defer srv.Stop()
 
-	proxy, err := NewProxy(&TestConfig{
+	proxy, err := NewProxy(&TestConfigLoader{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
@@ -49,7 +49,7 @@ func TestProxySwitch(t *testing.T) {
 	srv_1 := fakeredis.Start("srv-1")
 	defer srv_1.Stop()
 
-	conf := &TestConfig{
+	conf := &TestConfigLoader{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: srv_0.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
@@ -80,7 +80,7 @@ func TestProxyAuthenticatesClient(t *testing.T) {
 	srv := fakeredis.Start("srv")
 	defer srv.Stop()
 
-	conf := &TestConfig{
+	conf := &TestConfigLoader{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0", Pass: "test-pass"},
@@ -116,7 +116,7 @@ func TestOpenProxyBlocksAuthCommands(t *testing.T) {
 	srv := fakeredis.Start("srv")
 	defer srv.Stop()
 
-	conf := &TestConfig{
+	conf := &TestConfigLoader{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
@@ -162,7 +162,7 @@ func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 	defer redis.Process.Kill()
 
 	redisUrl := fmt.Sprintf("localhost:%d", BaseTestRedisPort)
-	conf := &TestConfig{
+	conf := &TestConfigLoader{
 		conf: &ProxyConfig{
 			Uplink: AddrSpec{Addr: redisUrl, Pass: "test-pass"},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
@@ -185,7 +185,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 	srv_1 := fakeredis.Start("srv-1")
 	defer srv_1.Stop()
 
-	conf := NewTestConfig(srv_0.Addr().String())
+	conf := NewTestConfigLoader(srv_0.Addr().String())
 	proxy := mustStartTestProxy(t, conf)
 	defer proxy.controller.Stop()
 
@@ -213,7 +213,7 @@ func TestProxyKillsConnectionOnBrokenCommands(t *testing.T) {
 	srv := fakeredis.Start("srv")
 	defer srv.Stop()
 
-	proxy := mustStartTestProxy(t, NewTestConfig(srv.Addr().String()))
+	proxy := mustStartTestProxy(t, NewTestConfigLoader(srv.Addr().String()))
 	defer proxy.controller.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
