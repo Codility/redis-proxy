@@ -2,6 +2,7 @@ package rproxy
 
 import (
 	"errors"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -138,7 +139,9 @@ func (proxy *Proxy) handleClient(cliConn *resp.Conn) {
 	for {
 		req, err := cliConn.ReadMsg()
 		if err != nil {
-			log.Printf("Read error: %v\n", err)
+			if err != io.EOF {
+				log.Printf("Read error: %v\n", err)
+			}
 			return
 		}
 
