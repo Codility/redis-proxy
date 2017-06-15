@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"time"
@@ -43,7 +44,11 @@ func (r *Redis) Start() {
 	}
 	r.cmd = exec.Command("redis-server", args...)
 	handleProcessOutput(r.cmd, fmt.Sprintf("[Redis-%d:stdout]", r.port), fmt.Sprintf("[Redis-%d:stderr]", r.port))
-	r.cmd.Dir = "tmp/"
+	r.cmd.Dir = fmt.Sprintf("tmp/redis-%d/", r.port)
+
+	if err := os.MkdirAll(r.cmd.Dir, 0777); err != nil {
+		panic(err)
+	}
 
 	stdin, err := r.cmd.StdinPipe()
 	if err != nil {
