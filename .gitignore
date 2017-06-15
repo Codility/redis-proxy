@@ -4,3 +4,4 @@ redis-proxy
 switch-test
 *.rdb
 conf-[ab].json
+[#]*
