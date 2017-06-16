@@ -33,10 +33,8 @@ func TestProxy(t *testing.T) {
 		},
 	})
 	assert.Nil(t, err)
-	assert.False(t, proxy.Alive())
-
-	go proxy.Run()
-	waitUntil(t, func() bool { return proxy.Alive() })
+	proxy.Start()
+	assert.True(t, proxy.Alive())
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
@@ -64,10 +62,8 @@ func TestProxyTLS(t *testing.T) {
 		},
 	})
 	assert.Nil(t, err)
-	assert.False(t, proxy.Alive())
-
-	go proxy.Run()
-	waitUntil(t, func() bool { return proxy.Alive() })
+	proxy.Start()
+	assert.True(t, proxy.Alive())
 
 	certPEM, err := ioutil.ReadFile("../test_data/tls/testca/cacert.pem")
 	assert.Nil(t, err)
@@ -86,6 +82,43 @@ func TestProxyTLS(t *testing.T) {
 
 	proxy.controller.Stop()
 	waitUntil(t, func() bool { return !proxy.Alive() })
+}
+
+func TestProxyUplinkTLS(t *testing.T) {
+	srv := fakeredis.Start("fake")
+	defer srv.Stop()
+
+	firstProxy := mustStartTestProxy(t, &TestConfigLoader{
+		conf: &ProxyConfig{
+			Uplink: AddrSpec{Addr: srv.Addr().String()},
+			Listen: AddrSpec{
+				Addr: "127.0.0.1:0",
+				TLS: &TLSSpec{
+					CertFile: "../test_data/tls/server/cert.pem",
+					KeyFile:  "../test_data/tls/server/key.pem",
+				}},
+			Admin: AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	})
+	defer firstProxy.controller.Stop()
+
+	laddr := strings.Replace(firstProxy.ListenAddr().String(), "127.0.0.1", "localhost", -1)
+	secondProxy := mustStartTestProxy(t, &TestConfigLoader{
+		conf: &ProxyConfig{
+			Uplink: AddrSpec{Addr: laddr,
+				TLS: &TLSSpec{
+					CACertFile: "../test_data/tls/testca/cacert.pem",
+				}},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	})
+	defer secondProxy.controller.Stop()
+
+	c := resp.MustDial("tcp", secondProxy.ListenAddr().String(), 0, false)
+	resp, err := c.Call(resp.MsgFromStrings("get", "a"))
+	assert.Nil(t, err)
+	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 }
 
 func TestProxySwitch(t *testing.T) {

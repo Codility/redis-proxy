@@ -9,7 +9,7 @@ import (
 // AddrSpec
 
 type TLSSpec struct {
-	CertFile, KeyFile string
+	CertFile, KeyFile, CACertFile string
 }
 
 type AddrSpec struct {

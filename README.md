@@ -5,9 +5,12 @@ Redis Proxy
 Current state
 -------------
 
- - TODO: add TLS to listener and admin
- - TODO: add TLS to uplink (including reloads)
- - TODO: better config file validation (require minimal set of values)
+ - TODO: better config file validation
+   - require minimal set of values
+   - when (Admin|Listen).TLS present: require key and cert
+   - when (Uplink).TLS present: require cacert
+ - TODO: use TLS in switch-test
+ - TODO: add TLS client verification (in listen, admin, uplink)
  - TODO: verify connection to new Redis before reloading config
  - TODO: switch-test: wait for replication to really catch up
  - TODO: move switchover logic to proxy (old proxy can handle the entire process)

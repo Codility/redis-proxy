@@ -54,9 +54,8 @@ func (r *TestRequest) Do() {
 func mustStartTestProxy(t *testing.T, conf *TestConfigLoader) *Proxy {
 	proxy, err := NewProxy(conf)
 	assert.Nil(t, err)
-	assert.False(t, proxy.Alive())
-
 	proxy.Start()
+	assert.True(t, proxy.Alive())
 	return proxy
 }
 
