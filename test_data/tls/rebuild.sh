@@ -18,7 +18,7 @@ private_key = $dir/private/cakey.pem
 serial = $dir/serial
 
 default_crl_days = 7
-default_days = 365
+default_days = 3650
 default_md = sha256
 
 policy = testca_policy
