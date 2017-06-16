@@ -12,12 +12,12 @@ type ProxyControllerChannels struct {
 type ProxyControllerProc struct {
 	channels ProxyControllerChannels
 
-	confHolder     ProxyConfigHolder
+	confHolder     ConfigHolder
 	activeRequests int
 	state          ControllerState
 }
 
-func NewProxyControllerProc(confHolder ProxyConfigHolder) *ProxyControllerProc {
+func NewProxyControllerProc(confHolder ConfigHolder) *ProxyControllerProc {
 	return &ProxyControllerProc{
 		channels: ProxyControllerChannels{
 			requestPermission: make(chan chan struct{}, MaxConnections),

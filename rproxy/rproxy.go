@@ -12,14 +12,14 @@ import (
 	"gitlab.codility.net/marcink/redis-proxy/resp"
 )
 
-type ProxyConfigHolder interface {
+type ConfigHolder interface {
 	ReloadConfig()
-	GetConfig() *ProxyConfig
+	GetConfig() *Config
 }
 
 type Proxy struct {
 	configLoader          ConfigLoader
-	config                *ProxyConfig
+	config                *Config
 	controller            *ProxyController
 	listenAddr, adminAddr *net.Addr
 }
@@ -112,7 +112,7 @@ func (proxy *Proxy) ReloadConfig() {
 	proxy.config = newConfig
 }
 
-func (proxy *Proxy) GetConfig() *ProxyConfig {
+func (proxy *Proxy) GetConfig() *Config {
 	return proxy.config
 }
 
@@ -127,7 +127,7 @@ func (proxy *Proxy) watchSignals() {
 	}
 }
 
-func (proxy *Proxy) verifyNewConfig(newConfig *ProxyConfig) error {
+func (proxy *Proxy) verifyNewConfig(newConfig *Config) error {
 	config := proxy.config
 	if !config.Listen.Equal(&newConfig.Listen) {
 		return errors.New("New config must have the same `listen` block as the old one.")

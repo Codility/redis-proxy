@@ -24,9 +24,9 @@ func (as *AddrSpec) Equal(other *AddrSpec) bool {
 }
 
 ////////////////////////////////////////
-// ProxyConfig
+// Config
 
-type ProxyConfig struct {
+type Config struct {
 	Uplink          AddrSpec `json:"uplink"`
 	Listen          AddrSpec `json:"listen"`
 	Admin           AddrSpec `json:"admin"`
@@ -35,7 +35,7 @@ type ProxyConfig struct {
 }
 
 type ConfigLoader interface {
-	Load() (*ProxyConfig, error)
+	Load() (*Config, error)
 }
 
 ////////////////////////////////////////
@@ -49,12 +49,12 @@ func NewFileConfigLoader(name string) *FileConfigLoader {
 	return &FileConfigLoader{name}
 }
 
-func (f *FileConfigLoader) Load() (*ProxyConfig, error) {
+func (f *FileConfigLoader) Load() (*Config, error) {
 	configJson, err := ioutil.ReadFile(f.fileName)
 	if err != nil {
 		return nil, err
 	}
-	var config ProxyConfig
+	var config Config
 	return &config, json.Unmarshal(configJson, &config)
 }
 
@@ -62,13 +62,13 @@ func (f *FileConfigLoader) Load() (*ProxyConfig, error) {
 // TestConfigLoader
 
 type TestConfigLoader struct {
-	conf *ProxyConfig
+	conf *Config
 	err  error
 }
 
 func NewTestConfigLoader(uplinkAddr string) *TestConfigLoader {
 	return &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: uplinkAddr},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -76,10 +76,10 @@ func NewTestConfigLoader(uplinkAddr string) *TestConfigLoader {
 	}
 }
 
-func (c *TestConfigLoader) Load() (*ProxyConfig, error) {
+func (c *TestConfigLoader) Load() (*Config, error) {
 	return c.conf, c.err
 }
 
-func (c *TestConfigLoader) Replace(conf *ProxyConfig) {
+func (c *TestConfigLoader) Replace(conf *Config) {
 	c.conf = conf
 }

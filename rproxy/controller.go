@@ -53,7 +53,7 @@ type ControllerInfo struct {
 	ActiveRequests  int
 	WaitingRequests int
 	State           ControllerState
-	Config          *ProxyConfig
+	Config          *Config
 }
 
 func NewProxyController() *ProxyController {
@@ -110,7 +110,7 @@ func (controller *ProxyController) ReloadAndWait() {
 	}
 }
 
-func (controller *ProxyController) Start(ch ProxyConfigHolder) {
+func (controller *ProxyController) Start(ch ConfigHolder) {
 	go controller.run(ch)
 	for {
 		if controller.GetInfo().State == ProxyRunning {
@@ -137,7 +137,7 @@ func (controller *ProxyController) Alive() bool {
 ////////////////////////////////////////
 // ProxyController implementation
 
-func (controller *ProxyController) run(confHolder ProxyConfigHolder) {
+func (controller *ProxyController) run(confHolder ConfigHolder) {
 	controller.proc = NewProxyControllerProc(confHolder)
 	defer func() {
 		controller.proc = nil

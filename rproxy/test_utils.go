@@ -13,12 +13,12 @@ import (
 // TestConfigHolder
 
 type TestConfigHolder struct {
-	config              *ProxyConfig
+	config              *Config
 	GetConfigCallCnt    int
 	ReloadConfigCallCnt int
 }
 
-func (ch *TestConfigHolder) GetConfig() *ProxyConfig {
+func (ch *TestConfigHolder) GetConfig() *Config {
 	ch.GetConfigCallCnt += 1
 	return ch.config
 }

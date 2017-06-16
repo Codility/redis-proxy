@@ -18,7 +18,7 @@ func TestProxyAdminNonTLS(t *testing.T) {
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -37,7 +37,7 @@ func TestProxyAdminTLS(t *testing.T) {
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin: AddrSpec{

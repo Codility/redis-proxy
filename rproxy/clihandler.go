@@ -84,7 +84,7 @@ func (ch *CliHandler) Run() {
 	}
 }
 
-func (ch *CliHandler) dialUplink(config *ProxyConfig) error {
+func (ch *CliHandler) dialUplink(config *Config) error {
 	if ch.uplinkConn != nil {
 		ch.uplinkConn.Close()
 		ch.uplinkConn = nil

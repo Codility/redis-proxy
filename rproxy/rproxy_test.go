@@ -26,7 +26,7 @@ func TestProxy(t *testing.T) {
 	defer srv.Stop()
 
 	proxy, err := NewProxy(&TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -50,7 +50,7 @@ func TestProxyTLS(t *testing.T) {
 	defer srv.Stop()
 
 	proxy, err := NewProxy(&TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{
 				Addr: "127.0.0.1:0",
@@ -89,7 +89,7 @@ func TestProxyUplinkTLS(t *testing.T) {
 	defer srv.Stop()
 
 	firstProxy := mustStartTestProxy(t, &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{
 				Addr: "127.0.0.1:0",
@@ -104,7 +104,7 @@ func TestProxyUplinkTLS(t *testing.T) {
 
 	laddr := strings.Replace(firstProxy.ListenAddr().String(), "127.0.0.1", "localhost", -1)
 	secondProxy := mustStartTestProxy(t, &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: laddr,
 				TLS: &TLSSpec{
 					CACertFile: "../test_data/tls/testca/cacert.pem",
@@ -128,7 +128,7 @@ func TestProxySwitch(t *testing.T) {
 	defer srv_1.Stop()
 
 	conf := &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv_0.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -141,7 +141,7 @@ func TestProxySwitch(t *testing.T) {
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 
-	conf.Replace(&ProxyConfig{
+	conf.Replace(&Config{
 		Uplink: AddrSpec{Addr: srv_1.Addr().String()},
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
 		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -159,7 +159,7 @@ func TestProxyAuthenticatesClient(t *testing.T) {
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0", Pass: "test-pass"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -195,7 +195,7 @@ func TestOpenProxyBlocksAuthCommands(t *testing.T) {
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -241,7 +241,7 @@ func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 
 	redisUrl := fmt.Sprintf("localhost:%d", BaseTestRedisPort)
 	conf := &TestConfigLoader{
-		conf: &ProxyConfig{
+		conf: &Config{
 			Uplink: AddrSpec{Addr: redisUrl, Pass: "test-pass"},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
@@ -275,7 +275,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 	assert.True(t, srv_0.LastRequest().Equal(resp.MsgFromStrings("SELECT", "1")))
 
 	// 2. Proxy must resend that message after reconnecting, before first request
-	conf.Replace(&ProxyConfig{
+	conf.Replace(&Config{
 		Uplink: AddrSpec{Addr: srv_1.Addr().String()},
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
 		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
