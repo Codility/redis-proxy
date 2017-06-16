@@ -37,17 +37,13 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
-	genListener, err := net.Listen("tcp", proxy.config.Listen.Addr)
+	ln, tcpLn, addr, err := getListener(proxy.config.Listen)
 	if err != nil {
-		log.Fatalf("Admin interface: could not listen: %s", err)
 		return err
 	}
-	defer genListener.Close()
-	listener := genListener.(*net.TCPListener)
+	defer ln.Close()
 
-	addr := listener.Addr()
-	proxy.listenAddr = &addr
-
+	proxy.listenAddr = addr
 	log.Println("Listening on", proxy.ListenAddr())
 
 	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
@@ -60,8 +56,8 @@ func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
 	}
 
 	for proxy.controller.Alive() {
-		listener.SetDeadline(time.Now().Add(time.Second))
-		conn, err := listener.Accept()
+		tcpLn.SetDeadline(time.Now().Add(time.Second))
+		conn, err := ln.Accept()
 		if err != nil {
 			if resp.IsNetTimeout(err) {
 				continue

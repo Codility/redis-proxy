@@ -2,11 +2,15 @@ package rproxy
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +39,47 @@ func TestProxy(t *testing.T) {
 	waitUntil(t, func() bool { return proxy.Alive() })
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
+	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
+	assert.Equal(t, srv.ReqCnt(), 1)
+
+	proxy.controller.Stop()
+	waitUntil(t, func() bool { return !proxy.Alive() })
+}
+
+func TestProxyTLS(t *testing.T) {
+	srv := fakeredis.Start("fake")
+	defer srv.Stop()
+
+	proxy, err := NewProxy(&TestConfigLoader{
+		conf: &ProxyConfig{
+			Uplink: AddrSpec{Addr: srv.Addr().String()},
+			Listen: AddrSpec{
+				Addr: "127.0.0.1:0",
+				TLS: &TLSSpec{
+					CertFile: "../test_data/tls/server/cert.pem",
+					KeyFile:  "../test_data/tls/server/key.pem",
+				}},
+			Admin: AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	})
+	assert.Nil(t, err)
+	assert.False(t, proxy.Alive())
+
+	go proxy.Run()
+	waitUntil(t, func() bool { return proxy.Alive() })
+
+	certPEM, err := ioutil.ReadFile("../test_data/tls/testca/cacert.pem")
+	assert.Nil(t, err)
+
+	roots := x509.NewCertPool()
+	assert.True(t, roots.AppendCertsFromPEM(certPEM))
+
+	addr := strings.Replace(proxy.ListenAddr().String(), "127.0.0.1", "localhost", -1)
+	tlsc, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: roots})
+	assert.Nil(t, err)
+
+	c := resp.NewConn(tlsc, 0, false)
 	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
