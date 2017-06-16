@@ -31,12 +31,12 @@ func (ch *TestConfigHolder) ReloadConfig() {
 // TestRequest
 
 type TestRequest struct {
-	contr *ProxyController
+	contr *Controller
 	done  bool
 	block func()
 }
 
-func NewTestRequest(contr *ProxyController, block func()) *TestRequest {
+func NewTestRequest(contr *Controller, block func()) *TestRequest {
 	return &TestRequest{contr: contr, block: block}
 }
 

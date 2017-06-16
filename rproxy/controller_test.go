@@ -8,7 +8,7 @@ import (
 )
 
 func TestControllerStartStop(t *testing.T) {
-	contr := NewProxyController()
+	contr := NewController()
 	ch := &TestConfigHolder{}
 
 	assert.Equal(t, contr.GetInfo().State, ProxyStopped)
@@ -21,7 +21,7 @@ func TestControllerStartStop(t *testing.T) {
 }
 
 func TestControllerPause(t *testing.T) {
-	contr := NewProxyController()
+	contr := NewController()
 	contr.Start(&TestConfigHolder{})
 	defer contr.Stop()
 	assert.Equal(t, contr.GetInfo().State, ProxyRunning)
@@ -48,7 +48,7 @@ func TestControllerPause(t *testing.T) {
 }
 
 func TestControllerAllowsParallelRequests(t *testing.T) {
-	contr := NewProxyController()
+	contr := NewController()
 	contr.Start(&TestConfigHolder{})
 	defer contr.Stop()
 
@@ -66,7 +66,7 @@ func TestControllerAllowsParallelRequests(t *testing.T) {
 }
 
 func TestControllerPauseDuringActiveRequests(t *testing.T) {
-	contr := NewProxyController()
+	contr := NewController()
 	contr.Start(&TestConfigHolder{})
 	defer contr.Stop()
 
@@ -112,7 +112,7 @@ func TestControllerPauseDuringActiveRequests(t *testing.T) {
 }
 
 func TestControllerReloadWaitsForPause(t *testing.T) {
-	contr := NewProxyController()
+	contr := NewController()
 	ch := &TestConfigHolder{}
 	contr.Start(ch)
 	defer contr.Stop()

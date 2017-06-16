@@ -2,24 +2,24 @@ package rproxy
 
 import "log"
 
-type ProxyControllerChannels struct {
+type ControllerChannels struct {
 	requestPermission chan chan struct{}
 	releasePermission chan struct{}
 	info              chan chan *ControllerInfo
 	command           chan ControllerCommand
 }
 
-type ProxyControllerProc struct {
-	channels ProxyControllerChannels
+type ControllerProc struct {
+	channels ControllerChannels
 
 	confHolder     ConfigHolder
 	activeRequests int
 	state          ControllerState
 }
 
-func NewProxyControllerProc(confHolder ConfigHolder) *ProxyControllerProc {
-	return &ProxyControllerProc{
-		channels: ProxyControllerChannels{
+func NewControllerProc(confHolder ConfigHolder) *ControllerProc {
+	return &ControllerProc{
+		channels: ControllerChannels{
 			requestPermission: make(chan chan struct{}, MaxConnections),
 			releasePermission: make(chan struct{}, MaxConnections),
 			info:              make(chan chan *ControllerInfo),
@@ -29,22 +29,22 @@ func NewProxyControllerProc(confHolder ConfigHolder) *ProxyControllerProc {
 	}
 }
 
-func (p *ProxyControllerProc) run() {
+func (p *ControllerProc) run() {
 	p.state = ProxyRunning
 
-	channelMap := map[ControllerState]*ProxyControllerChannels{
+	channelMap := map[ControllerState]*ControllerChannels{
 		ProxyRunning: &p.channels,
-		ProxyPausing: &ProxyControllerChannels{
+		ProxyPausing: &ControllerChannels{
 			requestPermission: nil,
 			releasePermission: p.channels.releasePermission,
 			info:              p.channels.info,
 			command:           nil},
-		ProxyReloading: &ProxyControllerChannels{
+		ProxyReloading: &ControllerChannels{
 			requestPermission: nil,
 			releasePermission: p.channels.releasePermission,
 			info:              p.channels.info,
 			command:           nil},
-		ProxyPaused: &ProxyControllerChannels{
+		ProxyPaused: &ControllerChannels{
 			requestPermission: nil,
 			releasePermission: nil,
 			info:              p.channels.info,
@@ -73,7 +73,7 @@ func (p *ProxyControllerProc) run() {
 	}
 }
 
-func (p *ProxyControllerProc) handleChannels(channels *ProxyControllerChannels) {
+func (p *ControllerProc) handleChannels(channels *ControllerChannels) {
 	select {
 	case permCh := <-channels.requestPermission:
 		permCh <- struct{}{}

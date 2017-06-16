@@ -20,7 +20,7 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader          ConfigLoader
 	config                *Config
-	controller            *ProxyController
+	controller            *Controller
 	listenAddr, adminAddr *net.Addr
 }
 
@@ -32,7 +32,7 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 	proxy := &Proxy{
 		configLoader: cl,
 		config:       config,
-		controller:   NewProxyController()}
+		controller:   NewController()}
 	return proxy, nil
 }
 
