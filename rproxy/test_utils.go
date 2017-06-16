@@ -56,8 +56,7 @@ func mustStartTestProxy(t *testing.T, conf *TestConfigLoader) *Proxy {
 	assert.Nil(t, err)
 	assert.False(t, proxy.Alive())
 
-	go proxy.Run()
-	waitUntil(t, func() bool { return proxy.Alive() })
+	proxy.Start()
 	return proxy
 }
 

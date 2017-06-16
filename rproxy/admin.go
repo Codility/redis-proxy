@@ -1,12 +1,39 @@
 package rproxy
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 )
+
+func getListener(addrSpec AddrSpec) (*net.Listener, *net.Addr, error) {
+	ln, err := net.Listen("tcp", addrSpec.Addr)
+	if err != nil {
+		log.Fatalf("Could not listen: %s", err)
+		return nil, nil, err
+	}
+	addr := ln.(*net.TCPListener).Addr()
+
+	tlsSpec := addrSpec.TLS
+	if tlsSpec == nil {
+		return &ln, &addr, nil
+	}
+
+	cer, err := tls.LoadX509KeyPair(tlsSpec.CertFile, tlsSpec.KeyFile)
+	if err != nil {
+		log.Fatalf("Could not load key pair (%s, %s): %s",
+			tlsSpec.CertFile, tlsSpec.KeyFile, err)
+		return nil, nil, err
+	}
+	tlsLn := tls.NewListener(ln, &tls.Config{
+		Certificates: []tls.Certificate{cer},
+	})
+	return &tlsLn, &addr, nil
+}
 
 func (proxy *Proxy) publishAdminInterface() {
 	mux := http.NewServeMux()
@@ -23,8 +50,22 @@ func (proxy *Proxy) publishAdminInterface() {
 	})
 
 	config := proxy.config
-	log.Printf("Admin URL: http://%s/\n", config.Admin.Addr)
-	log.Fatal(http.ListenAndServe(config.Admin.Addr, mux))
+
+	ln, addr, err := getListener(config.Admin)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	proxy.adminAddr = addr
+	proto := "http"
+	if config.Admin.TLS != nil {
+		proto = "https"
+	}
+	log.Printf("Admin URL: %s://%s/\n", proto, *addr)
+
+	go func() {
+		log.Fatal(http.Serve(*ln, mux))
+	}()
 }
 
 var statusTemplate *template.Template

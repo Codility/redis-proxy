@@ -18,10 +18,10 @@ type ProxyConfigHolder interface {
 }
 
 type Proxy struct {
-	configLoader ConfigLoader
-	config       *ProxyConfig
-	controller   *ProxyController
-	listenAddr   *net.Addr
+	configLoader          ConfigLoader
+	config                *ProxyConfig
+	controller            *ProxyController
+	listenAddr, adminAddr *net.Addr
 }
 
 func NewProxy(cl ConfigLoader) (*Proxy, error) {
@@ -36,9 +36,10 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 	return proxy, nil
 }
 
-func (proxy *Proxy) Run() error {
+func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
 	genListener, err := net.Listen("tcp", proxy.config.Listen.Addr)
 	if err != nil {
+		log.Fatalf("Admin interface: could not listen: %s", err)
 		return err
 	}
 	defer genListener.Close()
@@ -50,8 +51,13 @@ func (proxy *Proxy) Run() error {
 	log.Println("Listening on", proxy.ListenAddr())
 
 	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
+	proxy.publishAdminInterface()
+
 	go proxy.watchSignals()
-	go proxy.publishAdminInterface()
+
+	if doneChan != nil {
+		doneChan <- struct{}{}
+	}
 
 	for proxy.controller.Alive() {
 		listener.SetDeadline(time.Now().Add(time.Second))
@@ -60,6 +66,7 @@ func (proxy *Proxy) Run() error {
 			if resp.IsNetTimeout(err) {
 				continue
 			}
+			log.Fatalf("Admin interface: %s", err)
 			return err
 		} else {
 			ch := NewCliHandler(resp.NewConn(conn, 0, proxy.config.LogMessages), proxy)
@@ -69,12 +76,26 @@ func (proxy *Proxy) Run() error {
 	return nil
 }
 
+func (proxy *Proxy) Run() error {
+	return proxy.RunAndReport(nil)
+}
+
+func (proxy *Proxy) Start() {
+	doneChan := make(chan struct{})
+	go proxy.RunAndReport(doneChan)
+	<-doneChan
+}
+
 func (proxy *Proxy) Alive() bool {
 	return proxy.controller.Alive()
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
 	return *proxy.listenAddr
+}
+
+func (proxy *Proxy) AdminAddr() net.Addr {
+	return *proxy.adminAddr
 }
 
 func (proxy *Proxy) RequiresClientAuth() bool {

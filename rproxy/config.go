@@ -8,15 +8,23 @@ import (
 ////////////////////////////////////////
 // AddrSpec
 
+type TLSSpec struct {
+	CertFile, KeyFile string
+}
+
 type AddrSpec struct {
-	Addr string `json:"addr"`
-	Pass string `json:"pass"`
+	Addr string   `json:"addr"`
+	Pass string   `json:"pass"`
+	TLS  *TLSSpec `json:"tls"`
 }
 
 func (as *AddrSpec) Equal(other *AddrSpec) bool {
 	return (as.Addr == other.Addr) &&
 		(as.Pass == other.Pass)
 }
+
+////////////////////////////////////////
+// ProxyConfig
 
 type ProxyConfig struct {
 	Uplink          AddrSpec `json:"uplink"`
