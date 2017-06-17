@@ -176,6 +176,16 @@ func (c *Config) Prepare() ErrorList {
 	return errList
 }
 
+func (c *Config) ValidateSwitchTo(new *Config) error {
+	if !c.Listen.Equal(&new.Listen) {
+		return errors.New("New config must have the same `listen` block as the old one.")
+	}
+	if !c.Admin.Equal(&new.Admin) {
+		return errors.New("New config must have the same `admin` block as the old one.")
+	}
+	return nil
+}
+
 ////////////////////////////////////////
 // FileConfigLoader
 

@@ -1,7 +1,6 @@
 package rproxy
 
 import (
-	"errors"
 	"log"
 	"net"
 	"os"
@@ -141,12 +140,5 @@ func (proxy *Proxy) verifyNewConfig(newConfig *Config) error {
 		return errList.AsError()
 	}
 
-	config := proxy.config
-	if !config.Listen.Equal(&newConfig.Listen) {
-		return errors.New("New config must have the same `listen` block as the old one.")
-	}
-	if !config.Admin.Equal(&newConfig.Admin) {
-		return errors.New("New config must have the same `admin` block as the old one.")
-	}
-	return nil
+	return proxy.config.ValidateSwitchTo(newConfig)
 }
