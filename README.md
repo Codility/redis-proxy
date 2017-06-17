@@ -5,15 +5,13 @@ Redis Proxy
 Current state
 -------------
 
- - TODO: better config file validation
-   - require minimal set of values
-   - when (Admin|Listen).TLS present: require key and cert
-   - when (Uplink).TLS present: require cacert
+ - TODO: give feedback in reload API if new config is broken
  - TODO: use TLS in switch-test
  - TODO: add TLS client verification (in listen, admin, uplink)
- - TODO: verify connection to new Redis before reloading config
  - TODO: switch-test: wait for replication to really catch up
  - TODO: move switchover logic to proxy (old proxy can handle the entire process)
+ - TODO: nicer Proxy api (get rid of proxy.controller.* calls from the outside)
+ - TODO: allow IP addresses in test certificates (so that tests can use 127.0.0.1 instead of localhost)
 
 
 Possible optimizations

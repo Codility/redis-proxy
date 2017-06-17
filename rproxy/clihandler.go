@@ -1,13 +1,8 @@
 package rproxy
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"io"
-	"io/ioutil"
 	"log"
-	"net"
 
 	"gitlab.codility.net/marcink/redis-proxy/resp"
 )
@@ -90,38 +85,10 @@ func (ch *CliHandler) dialUplink(config *Config) error {
 		ch.uplinkConn = nil
 	}
 
-	if config.Uplink.TLS == nil {
-		conn, err := net.Dial("tcp", ch.uplinkConf.Addr)
-		if err != nil {
-			return err
-		}
-		ch.uplinkConn = resp.NewConn(conn,
-			config.ReadTimeLimitMs,
-			config.LogMessages,
-		)
-		return nil
-	}
-
-	// TODO: read the PEM once, not at every accept
-	certPEM, err := ioutil.ReadFile(ch.uplinkConf.TLS.CACertFile)
+	conn, err := config.Uplink.Dial()
 	if err != nil {
 		return err
 	}
-
-	roots := x509.NewCertPool()
-	if !roots.AppendCertsFromPEM(certPEM) {
-		err := errors.New("Could not add cert to pool")
-		log.Fatal(err)
-		return err
-	}
-
-	conn, err := tls.Dial("tcp", ch.uplinkConf.Addr, &tls.Config{
-		RootCAs: roots,
-	})
-	if err != nil {
-		return err
-	}
-
 	ch.uplinkConn = resp.NewConn(conn,
 		config.ReadTimeLimitMs,
 		config.LogMessages,

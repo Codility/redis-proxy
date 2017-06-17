@@ -154,6 +154,44 @@ func TestProxySwitch(t *testing.T) {
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-1\r\n")
 }
 
+func TestProxyRejectsBrokenConfigOnStart(t *testing.T) {
+	// empty config is invalid
+	proxy, err := NewProxy(&TestConfigLoader{conf: &Config{}})
+	assert.Nil(t, proxy)
+	assert.NotNil(t, err)
+}
+
+func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
+	srv_0 := fakeredis.Start("srv-0")
+	defer srv_0.Stop()
+
+	conf := &TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: srv_0.Addr().String()},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	}
+
+	proxy := mustStartTestProxy(t, conf)
+	defer proxy.controller.Stop()
+
+	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
+
+	conf.Replace(&Config{
+		Uplink: AddrSpec{Addr: "127.0.0.1:0"}, // <- incorrect uplink address
+		Listen: AddrSpec{Addr: "127.0.0.1:0"},
+		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+	})
+
+	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
+
+	proxy.controller.ReloadAndWait()
+
+	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
+}
+
 func TestProxyAuthenticatesClient(t *testing.T) {
 	srv := fakeredis.Start("srv")
 	defer srv.Stop()

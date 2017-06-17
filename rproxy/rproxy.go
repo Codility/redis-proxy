@@ -29,6 +29,14 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	errList := config.Prepare()
+	if !errList.Ok() {
+		err := errList.AsError()
+		log.Print(err)
+		return nil, err
+	}
+
 	proxy := &Proxy{
 		configLoader: cl,
 		config:       config,
@@ -128,6 +136,11 @@ func (proxy *Proxy) watchSignals() {
 }
 
 func (proxy *Proxy) verifyNewConfig(newConfig *Config) error {
+	errList := newConfig.Prepare()
+	if !errList.Ok() {
+		return errList.AsError()
+	}
+
 	config := proxy.config
 	if !config.Listen.Equal(&newConfig.Listen) {
 		return errors.New("New config must have the same `listen` block as the old one.")

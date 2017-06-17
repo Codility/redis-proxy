@@ -1,15 +1,61 @@
 package rproxy
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
+	"log"
+	"net"
+	"strings"
 )
+
+////////////////////////////////////////
+// ErrorList
+
+type ErrorList struct {
+	errors []string
+}
+
+func (l *ErrorList) Errors() []string {
+	if l.errors == nil {
+		return []string{}
+	} else {
+		return l.errors
+	}
+}
+
+func (l *ErrorList) Add(error string) {
+	l.errors = append(l.errors, error)
+}
+
+func (l *ErrorList) Ok() bool {
+	return l.errors == nil || len(l.errors) == 0
+}
+
+func (l *ErrorList) Append(other ErrorList) {
+	l.errors = append(l.errors, other.errors...)
+}
+
+func (l *ErrorList) AsError() error {
+	if l.Ok() {
+		return nil
+	}
+	return errors.New(strings.Join(l.Errors(), ", "))
+}
 
 ////////////////////////////////////////
 // AddrSpec
 
 type TLSSpec struct {
-	CertFile, KeyFile, CACertFile string
+	CertFile   string `json:"certfile"`
+	KeyFile    string `json:"keyfile"`
+	CACertFile string `json:"cacertfile"`
+
+	CertFilePEM   []byte `json:"-"`
+	KeyFilePEM    []byte `json:"-"`
+	CACertFilePEM []byte `json:"-"`
 }
 
 type AddrSpec struct {
@@ -21,6 +67,88 @@ type AddrSpec struct {
 func (as *AddrSpec) Equal(other *AddrSpec) bool {
 	return (as.Addr == other.Addr) &&
 		(as.Pass == other.Pass)
+}
+
+func (as *AddrSpec) Dial() (net.Conn, error) {
+	if as.TLS == nil {
+		return net.Dial("tcp", as.Addr)
+	}
+
+	// TODO: read the PEM once, not at every accept
+	certPEM, err := ioutil.ReadFile(as.TLS.CACertFile)
+	if err != nil {
+		log.Print("Could not load cert: " + err.Error())
+		return nil, err
+	}
+
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(certPEM) {
+		err := errors.New("Could not add cert to pool")
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return tls.Dial("tcp", as.Addr, &tls.Config{
+		RootCAs: roots,
+	})
+}
+
+func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
+	if as.Addr == "" {
+		return ErrorList{[]string{"Missing " + name + " address"}}
+	}
+
+	var err error
+	errors := ErrorList{}
+
+	if as.TLS != nil {
+		if server {
+			if as.TLS.CertFile == "" {
+				errors.Add(name + ".tls requires certfile")
+			} else {
+				as.TLS.CertFilePEM, err = ioutil.ReadFile(as.TLS.CertFile)
+				if err != nil {
+					log.Print(err)
+					errors.Add("could not load " + name + ".tls.certfile: " + as.TLS.CertFile)
+				}
+			}
+
+			if as.TLS.KeyFile == "" {
+				errors.Add(name + ".tls requires keyfile")
+			} else {
+				as.TLS.KeyFilePEM, err = ioutil.ReadFile(as.TLS.KeyFile)
+				if err != nil {
+					log.Print(err)
+					errors.Add("could not load " + name + ".tls.keyfile: " + as.TLS.KeyFile)
+				}
+			}
+		} else {
+			if as.TLS.CACertFile == "" {
+				errors.Add("uplink.tls requires cacertfile")
+			} else {
+				as.TLS.CACertFilePEM, err = ioutil.ReadFile(as.TLS.CACertFile)
+				if err != nil {
+					log.Print(err)
+					errors.Add("could not load " + name + ".tls.cacertfile: " + as.TLS.CACertFile)
+				}
+			}
+		}
+	}
+
+	if errors.Ok() && !server {
+		conn, err := as.Dial()
+		if err != nil {
+			log.Print(err)
+			tlsStr := "(non-TLS)"
+			if as.TLS != nil {
+				tlsStr = "(TLS)"
+			}
+			errors.Add("could not connect to " + name + ": " + as.Addr + " " + tlsStr)
+		} else {
+			conn.Close()
+		}
+	}
+	return errors
 }
 
 ////////////////////////////////////////
@@ -36,6 +164,16 @@ type Config struct {
 
 type ConfigLoader interface {
 	Load() (*Config, error)
+}
+
+func (c *Config) Prepare() ErrorList {
+	errList := ErrorList{}
+
+	errList.Append(c.Admin.Prepare("admin", true))
+	errList.Append(c.Listen.Prepare("listen", true))
+	errList.Append(c.Uplink.Prepare("uplink", false))
+
+	return errList
 }
 
 ////////////////////////////////////////
