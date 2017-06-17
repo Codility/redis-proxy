@@ -10,6 +10,7 @@ package fakeredis
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -97,13 +98,18 @@ func (s *FakeRedisServer) Addr() net.Addr {
 
 func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
 	rc := resp.NewConn(conn, 100, false)
+	defer rc.Close()
+
 	for !s.IsShuttingDown() {
 		req, err := rc.ReadMsg()
 		if err != nil {
-			if resp.IsNetTimeout(err) || (err == io.EOF) {
+			if resp.IsNetTimeout(err) {
 				continue
 			}
-			panic(err)
+			if err != io.EOF {
+				log.Print(err)
+			}
+			return
 		}
 		s.RecordRequest(req)
 
