@@ -65,8 +65,25 @@ type AddrSpec struct {
 }
 
 func (as *AddrSpec) Equal(other *AddrSpec) bool {
-	return (as.Addr == other.Addr) &&
-		(as.Pass == other.Pass)
+	if as.Addr != other.Addr || as.Pass != other.Pass {
+		return false
+	}
+
+	if as.TLS == nil || other.TLS == nil {
+		return as.TLS == other.TLS
+	} else {
+		return as.TLS.CertFile == other.TLS.CertFile &&
+			as.TLS.KeyFile == other.TLS.KeyFile &&
+			as.TLS.CACertFile == other.TLS.CACertFile
+	}
+}
+
+func (as *AddrSpec) AsJSON() string {
+	res, err := json.Marshal(as)
+	if err != nil {
+		return ""
+	}
+	return string(res)
 }
 
 func (as *AddrSpec) Dial() (net.Conn, error) {
@@ -184,6 +201,14 @@ func (c *Config) ValidateSwitchTo(new *Config) error {
 		return errors.New("New config must have the same `admin` block as the old one.")
 	}
 	return nil
+}
+
+func (c *Config) AsJSON() string {
+	res, err := json.Marshal(c)
+	if err != nil {
+		return ""
+	}
+	return string(res)
 }
 
 ////////////////////////////////////////

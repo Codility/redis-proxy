@@ -123,3 +123,30 @@ func TestConfigValidation(t *testing.T) {
 		"could not load uplink.tls.cacertfile: no-such-cacertfile",
 	})
 }
+
+func TestAddrSpecEquality(t *testing.T) {
+
+	assertEqual := func(a, b AddrSpec) {
+		if !a.Equal(&b) {
+			t.Fatal("Expected AddrSpects to be equal: ", a.AsJSON(), b.AsJSON())
+		}
+	}
+
+	assertNotEqual := func(a, b AddrSpec) {
+		if a.Equal(&b) {
+			t.Fatal("Expected AddrSpects *not* to be equal: ", a.AsJSON(), b.AsJSON())
+		}
+	}
+
+	assertEqual(AddrSpec{Addr: "a", TLS: &TLSSpec{CACertFile: "ca"}},
+		AddrSpec{Addr: "a", TLS: &TLSSpec{CACertFile: "ca"}})
+	assertNotEqual(AddrSpec{Addr: "a", TLS: &TLSSpec{CACertFile: "ca"}},
+		AddrSpec{Addr: "a", TLS: &TLSSpec{CACertFile: "ca-changed"}})
+	assertNotEqual(AddrSpec{Addr: "a", TLS: &TLSSpec{CACertFile: "ca"}},
+		AddrSpec{Addr: "a"})
+
+	assertEqual(AddrSpec{Addr: "a", Pass: "p"},
+		AddrSpec{Addr: "a", Pass: "p"})
+	assertNotEqual(AddrSpec{Addr: "a", Pass: "p"},
+		AddrSpec{Addr: "a", Pass: "p-changed"})
+}
