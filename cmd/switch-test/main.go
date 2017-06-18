@@ -27,6 +27,16 @@ const (
 func main() {
 	log.SetFlags(log.Ltime)
 
+	redis_a := NewRedis(RedisAPort)
+	redis_a.Start()
+	defer redis_a.Stop()
+
+	redis_b := NewRedis(RedisBPort)
+	defer redis_b.Stop()
+
+	// Give Redis time to start
+	time.Sleep(time.Second)
+
 	proxy_a := NewProxy("tmp/conf-a.json", ProxyAPort, ProxyAAdmin, RedisAPort)
 	proxy_b := NewProxy("tmp/conf-b.json", ProxyBPort, ProxyBAdmin, ProxyAPort)
 
@@ -35,13 +45,6 @@ func main() {
 
 	proxy_b.Start()
 	defer proxy_b.Stop()
-
-	redis_a := NewRedis(RedisAPort)
-	redis_a.Start()
-	defer redis_a.Stop()
-
-	redis_b := NewRedis(RedisBPort)
-	defer redis_b.Stop()
 
 	go statusLoop()
 
