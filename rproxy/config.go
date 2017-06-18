@@ -48,34 +48,14 @@ func (l *ErrorList) AsError() error {
 ////////////////////////////////////////
 // AddrSpec
 
-type TLSSpec struct {
+type AddrSpec struct {
+	Addr string `json:"addr"`
+	Pass string `json:"pass"`
+	TLS  bool   `json:"tls"`
+
 	CertFile   string `json:"certfile"`
 	KeyFile    string `json:"keyfile"`
 	CACertFile string `json:"cacertfile"`
-
-	CertFilePEM   []byte `json:"-"`
-	KeyFilePEM    []byte `json:"-"`
-	CACertFilePEM []byte `json:"-"`
-}
-
-type AddrSpec struct {
-	Addr string   `json:"addr"`
-	Pass string   `json:"pass"`
-	TLS  *TLSSpec `json:"tls"`
-}
-
-func (as *AddrSpec) Equal(other *AddrSpec) bool {
-	if as.Addr != other.Addr || as.Pass != other.Pass {
-		return false
-	}
-
-	if as.TLS == nil || other.TLS == nil {
-		return as.TLS == other.TLS
-	} else {
-		return as.TLS.CertFile == other.TLS.CertFile &&
-			as.TLS.KeyFile == other.TLS.KeyFile &&
-			as.TLS.CACertFile == other.TLS.CACertFile
-	}
 }
 
 func (as *AddrSpec) AsJSON() string {
@@ -87,12 +67,12 @@ func (as *AddrSpec) AsJSON() string {
 }
 
 func (as *AddrSpec) Dial() (net.Conn, error) {
-	if as.TLS == nil {
+	if !as.TLS {
 		return net.Dial("tcp", as.Addr)
 	}
 
 	// TODO: read the PEM once, not at every accept
-	certPEM, err := ioutil.ReadFile(as.TLS.CACertFile)
+	certPEM, err := ioutil.ReadFile(as.CACertFile)
 	if err != nil {
 		log.Print("Could not load cert: " + err.Error())
 		return nil, err
@@ -110,6 +90,35 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 	})
 }
 
+// Returns:
+// - top-level generic net.Listener
+// - the underlying net.TCPListener (different from the first listener in case of TLS)
+// - effective address
+// - error, if any
+func (as *AddrSpec) Listen() (net.Listener, *net.TCPListener, *net.Addr, error) {
+	ln, err := net.Listen("tcp", as.Addr)
+	if err != nil {
+		log.Fatalf("Could not listen: %s", err)
+		return nil, nil, nil, err
+	}
+	addr := ln.(*net.TCPListener).Addr()
+
+	if !as.TLS {
+		return ln, ln.(*net.TCPListener), &addr, nil
+	}
+
+	cer, err := tls.LoadX509KeyPair(as.CertFile, as.KeyFile)
+	if err != nil {
+		log.Fatalf("Could not load key pair (%s, %s): %s",
+			as.CertFile, as.KeyFile, err)
+		return nil, nil, nil, err
+	}
+	tlsLn := tls.NewListener(ln, &tls.Config{
+		Certificates: []tls.Certificate{cer},
+	})
+	return tlsLn, ln.(*net.TCPListener), &addr, nil
+}
+
 func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 	if as.Addr == "" {
 		return ErrorList{[]string{"Missing " + name + " address"}}
@@ -118,36 +127,32 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 	var err error
 	errors := ErrorList{}
 
-	if as.TLS != nil {
+	pemFileReadable := func(name string) bool {
+		_, err = ioutil.ReadFile(name)
+		if err != nil {
+			log.Print(err)
+		}
+		return err == nil
+	}
+
+	if as.TLS {
 		if server {
-			if as.TLS.CertFile == "" {
+			if as.CertFile == "" {
 				errors.Add(name + ".tls requires certfile")
-			} else {
-				as.TLS.CertFilePEM, err = ioutil.ReadFile(as.TLS.CertFile)
-				if err != nil {
-					log.Print(err)
-					errors.Add("could not load " + name + ".tls.certfile: " + as.TLS.CertFile)
-				}
+			} else if !pemFileReadable(as.CertFile) {
+				errors.Add("could not load " + name + ".certfile: " + as.CertFile)
 			}
 
-			if as.TLS.KeyFile == "" {
+			if as.KeyFile == "" {
 				errors.Add(name + ".tls requires keyfile")
-			} else {
-				as.TLS.KeyFilePEM, err = ioutil.ReadFile(as.TLS.KeyFile)
-				if err != nil {
-					log.Print(err)
-					errors.Add("could not load " + name + ".tls.keyfile: " + as.TLS.KeyFile)
-				}
+			} else if !pemFileReadable(as.KeyFile) {
+				errors.Add("could not load " + name + ".keyfile: " + as.KeyFile)
 			}
 		} else {
-			if as.TLS.CACertFile == "" {
+			if as.CACertFile == "" {
 				errors.Add("uplink.tls requires cacertfile")
-			} else {
-				as.TLS.CACertFilePEM, err = ioutil.ReadFile(as.TLS.CACertFile)
-				if err != nil {
-					log.Print(err)
-					errors.Add("could not load " + name + ".tls.cacertfile: " + as.TLS.CACertFile)
-				}
+			} else if !pemFileReadable(as.CACertFile) {
+				errors.Add("could not load " + name + ".cacertfile: " + as.CACertFile)
 			}
 		}
 	}
@@ -157,7 +162,7 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 		if err != nil {
 			log.Print(err)
 			tlsStr := "(non-TLS)"
-			if as.TLS != nil {
+			if as.TLS {
 				tlsStr = "(TLS)"
 			}
 			errors.Add("could not connect to " + name + ": " + as.Addr + " " + tlsStr)
@@ -194,10 +199,10 @@ func (c *Config) Prepare() ErrorList {
 }
 
 func (c *Config) ValidateSwitchTo(new *Config) error {
-	if !c.Listen.Equal(&new.Listen) {
+	if c.Listen != new.Listen {
 		return errors.New("New config must have the same `listen` block as the old one.")
 	}
-	if !c.Admin.Equal(&new.Admin) {
+	if c.Admin != new.Admin {
 		return errors.New("New config must have the same `admin` block as the old one.")
 	}
 	return nil

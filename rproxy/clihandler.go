@@ -45,7 +45,7 @@ func (ch *CliHandler) Run() {
 		res, err := ch.proxy.controller.CallUplink(func() (*resp.Msg, error) {
 			config := ch.proxy.config
 			currUplinkConf := &config.Uplink
-			if (ch.uplinkConf == nil) || !ch.uplinkConf.Equal(currUplinkConf) {
+			if (ch.uplinkConf == nil) || *ch.uplinkConf != *currUplinkConf {
 				ch.uplinkConf = currUplinkConf
 				if err := ch.dialUplink(config); err != nil {
 					return nil, err

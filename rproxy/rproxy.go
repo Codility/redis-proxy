@@ -44,7 +44,7 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
-	ln, tcpLn, addr, err := getListener(proxy.config.Listen)
+	ln, tcpLn, addr, err := proxy.config.Listen.Listen()
 	if err != nil {
 		return err
 	}

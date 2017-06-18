@@ -41,11 +41,11 @@ func TestProxyAdminTLS(t *testing.T) {
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin: AddrSpec{
-				Addr: "127.0.0.1:0",
-				TLS: &TLSSpec{
-					CertFile: "../test_data/tls/server/cert.pem",
-					KeyFile:  "../test_data/tls/server/key.pem",
-				}},
+				Addr:     "127.0.0.1:0",
+				TLS:      true,
+				CertFile: "../test_data/tls/server/cert.pem",
+				KeyFile:  "../test_data/tls/server/key.pem",
+			},
 		},
 	}
 	proxy := mustStartTestProxy(t, conf)

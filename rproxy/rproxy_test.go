@@ -53,11 +53,11 @@ func TestProxyTLS(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{
-				Addr: "127.0.0.1:0",
-				TLS: &TLSSpec{
-					CertFile: "../test_data/tls/server/cert.pem",
-					KeyFile:  "../test_data/tls/server/key.pem",
-				}},
+				Addr:     "127.0.0.1:0",
+				TLS:      true,
+				CertFile: "../test_data/tls/server/cert.pem",
+				KeyFile:  "../test_data/tls/server/key.pem",
+			},
 			Admin: AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
@@ -92,11 +92,11 @@ func TestProxyUplinkTLS(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{
-				Addr: "127.0.0.1:0",
-				TLS: &TLSSpec{
-					CertFile: "../test_data/tls/server/cert.pem",
-					KeyFile:  "../test_data/tls/server/key.pem",
-				}},
+				Addr:     "127.0.0.1:0",
+				TLS:      true,
+				CertFile: "../test_data/tls/server/cert.pem",
+				KeyFile:  "../test_data/tls/server/key.pem",
+			},
 			Admin: AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
@@ -106,9 +106,9 @@ func TestProxyUplinkTLS(t *testing.T) {
 	secondProxy := mustStartTestProxy(t, &TestConfigLoader{
 		conf: &Config{
 			Uplink: AddrSpec{Addr: laddr,
-				TLS: &TLSSpec{
-					CACertFile: "../test_data/tls/testca/cacert.pem",
-				}},
+				TLS:        true,
+				CACertFile: "../test_data/tls/testca/cacert.pem",
+			},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},

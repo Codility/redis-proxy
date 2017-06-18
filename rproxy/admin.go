@@ -24,14 +24,14 @@ func (proxy *Proxy) publishAdminInterface() {
 
 	config := proxy.config
 
-	ln, _, addr, err := getListener(config.Admin)
+	ln, _, addr, err := config.Admin.Listen()
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	proxy.adminAddr = addr
 	proto := "http"
-	if config.Admin.TLS != nil {
+	if config.Admin.TLS {
 		proto = "https"
 	}
 	log.Printf("Admin URL: %s://%s/\n", proto, *addr)
