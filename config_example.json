@@ -1,15 +1,22 @@
 {
   "uplink": {
-    "addr": "localhost:6379"
-    "pass": "redis-password"
+    "addr": "localhost:6379",
+    "pass": "redis-password",
+    "tls": true,
+    "cacertfile": "cacert.pem"
   },
   "listen": {
     "addr": "127.0.0.1:7010",
-    "pass": "client-password"
+    "pass": "client-password",
+    "tls": true,
+    "certfile": "cert.pem",
+    "keyfile": "key.pem"
   },
   "admin": {
     "addr": "127.0.0.1:7011",
-    "pass": "http-auth-password"
+    "tls": true,
+    "certfile": "cert.pem",
+    "keyfile": "key.pem"
   },
   "log_messages": false,
   "read_time_limit_ms": 5000
