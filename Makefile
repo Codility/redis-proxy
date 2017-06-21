@@ -35,3 +35,18 @@ switch-test: redis-proxy cmd/switch-test/*.go
 
 run-switch-test: switch-test redis-proxy
 	./switch-test
+
+########################################
+# Jenkins[file] additions
+
+TARBALL=$(shell git rev-parse HEAD).tar.gz
+
+# See redis-proxy build on Jenkins. Note that this expects AWS configuration
+# variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) in the environment.
+.PHONY: upload
+upload: redis-proxy
+	tar czf $(TARBALL) redis-proxy
+	sha512sum $(TARBALL) | tee $(TARBALL).sha512
+	s3cmd -c s3cmd.conf put $(TARBALL) $(TARBALL).sha512 s3://codility-dist/redis-proxy/
+	echo $(TARBALL) | s3cmd -c s3cmd.conf put - s3://codility-dist/redis-proxy/current
+	rm $(TARBALL) $(TARBALL).sha512
