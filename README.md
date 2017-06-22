@@ -1,6 +1,8 @@
 Redis Proxy
 ===========
 
+**NOTE**: This project uses git-flow.
+
 
 Build
 -----
