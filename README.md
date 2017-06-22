@@ -1,10 +1,6 @@
 Redis Proxy
 ===========
 
-**NOTE**: This project uses git-flow[ish] layout: use `develop` branch
-as main integration point, and `master` as production-ready.
-
-
 Build
 -----
 
@@ -17,12 +13,27 @@ You need go 1.8.x.
     $ make
 
 
+Branching
+---------
+
+Use a minimal git-flowish branch model:
+
+   * `master` means production-ready, change it only by merging
+     hotfixes or `develop`; MR or direct merge from `develop` is okay,
+     there's no need for full git-flow release process,
+   * `develop` branch is the main integration point, merge finished
+     feature branches here,
+   * feature branches: use Codility standard `author|team/branch-desc`
+     names.
+
+
 Documentation
 -------------
 
 See doc/redis-proxy.md.
 
 For simple testing framework see doc/switch-test.md.
+
 
 Usage
 -----
