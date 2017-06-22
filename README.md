@@ -1,7 +1,8 @@
 Redis Proxy
 ===========
 
-**NOTE**: This project uses git-flow.
+**NOTE**: This project uses git-flow[ish] layout: use `develop` branch
+as main integration point, and `master` as production-ready.
 
 
 Build
