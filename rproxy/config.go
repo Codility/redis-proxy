@@ -95,6 +95,11 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 // - the underlying net.TCPListener (different from the first listener in case of TLS)
 // - effective address
 // - error, if any
+//
+// The reason for explicitely returning net.TCPListener is that the
+// proxy needs it to set deadlines on accept operations, but the
+// listener from tls package does not support them, and does not
+// provide any way to get to the underlying TCPListener.
 func (as *AddrSpec) Listen() (net.Listener, *net.TCPListener, *net.Addr, error) {
 	ln, err := net.Listen("tcp", as.Addr)
 	if err != nil {
