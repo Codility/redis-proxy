@@ -1,6 +1,7 @@
 // -*- groovy -*-
 pipeline {
   agent { label 'ec2-xenial-vendors' }
+  options { timeout(time: 20, unit: 'MINUTES') }
 
   stages {
     stage('Build') {
