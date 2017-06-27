@@ -10,11 +10,11 @@ endif
 .PHONY: all
 all:
 	@echo Targets:
-	@echo  - build-and-upload
+	@echo  - build-test-upload
 
 
-.PHONY: build-and-upload
-build-and-upload: redis-proxy upload-if-master
+.PHONY: build-test-upload
+build-test-upload: redis-proxy upload-if-master
 
 
 .PHONY: redis-proxy
