@@ -5,3 +5,4 @@ switch-test
 *.rdb
 conf-[ab].json
 [#]*
+.[#]*
