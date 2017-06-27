@@ -14,7 +14,7 @@ all:
 
 
 .PHONY: build-test-upload
-build-test-upload: redis-proxy upload-if-master
+build-test-upload: redis-proxy test upload-if-master
 
 
 .PHONY: redis-proxy
@@ -22,6 +22,12 @@ redis-proxy:
 	@echo $(subst STEPNAME,make redis-proxy,$(STEP_TEMPLATE))
 	make -f Makefile redis-proxy
 	ls -l redis-proxy
+
+
+.PHONY: test
+test: redis-proxy
+	@echo $(subst STEPNAME,test,$(STEP_TEMPLATE))
+	make -f Makefile test
 
 
 TARBALL=$(shell git rev-parse HEAD).tar.gz
@@ -35,7 +41,7 @@ ifeq ($(IS_MASTER),1)
 	tar czf $(TARBALL) redis-proxy
 	sha512sum $(TARBALL) | tee $(TARBALL).sha512
 	s3cmd -c s3cmd.conf put $(TARBALL) $(TARBALL).sha512 s3://codility-dist/redis-proxy/
-	echo $(TARBALL) | s3cmd -c s3cmd.conf put - s3://codility-dist/redis-proxy/current
+	echo $(CURRENT_SHA) | s3cmd -c s3cmd.conf put - s3://codility-dist/redis-proxy/current
 	rm $(TARBALL) $(TARBALL).sha512
 else
 	@echo Not on master, skipping upload.
