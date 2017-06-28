@@ -20,14 +20,14 @@ build-test-upload: redis-proxy test upload-if-master
 .PHONY: redis-proxy
 redis-proxy:
 	@echo $(subst STEPNAME,make redis-proxy,$(STEP_TEMPLATE))
-	make -f Makefile redis-proxy
+	$(MAKE) -f Makefile redis-proxy
 	ls -l redis-proxy
 
 
 .PHONY: test
 test: redis-proxy
 	@echo $(subst STEPNAME,test,$(STEP_TEMPLATE))
-	make -f Makefile test
+	$(MAKE) -f Makefile test
 
 
 TARBALL=$(shell git rev-parse HEAD).tar.gz
