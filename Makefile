@@ -6,6 +6,10 @@ all: redis-proxy switch-test
 redis-proxy: rproxy/*.go cmd/redis-proxy/*.go
 	./scripts/go build -o "$@" gitlab.codility.net/marcink/redis-proxy/cmd/redis-proxy
 
+.PHONY: clean
+clean:
+	rm -f redis-proxy
+
 #.PHONY: test
 #test:
 #	./scripts/go test
