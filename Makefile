@@ -1,4 +1,6 @@
-all: redis-proxy switch-test
+BINARIES=redis-proxy switch-test
+
+all: $(BINARIES)
 
 ########################################
 # redis-proxy and related targets
@@ -8,7 +10,7 @@ redis-proxy: rproxy/*.go cmd/redis-proxy/*.go
 
 .PHONY: clean
 clean:
-	rm -f redis-proxy
+	rm -rf $(BINARIES) .gopath
 
 #.PHONY: test
 #test:
