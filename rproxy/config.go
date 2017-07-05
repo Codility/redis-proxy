@@ -52,6 +52,7 @@ type AddrSpec struct {
 	Addr string `json:"addr"`
 	Pass string `json:"pass"`
 	TLS  bool   `json:"tls"`
+	Unix bool   `json:"unix"`
 
 	CertFile   string `json:"certfile"`
 	KeyFile    string `json:"keyfile"`
@@ -67,8 +68,13 @@ func (as *AddrSpec) AsJSON() string {
 }
 
 func (as *AddrSpec) Dial() (net.Conn, error) {
+	network := "tcp"
+	if as.Unix {
+		network = "unix"
+	}
+
 	if !as.TLS {
-		return net.Dial("tcp", as.Addr)
+		return net.Dial(network, as.Addr)
 	}
 
 	// TODO: read the PEM once, not at every accept
@@ -85,7 +91,7 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 		return nil, err
 	}
 
-	return tls.Dial("tcp", as.Addr, &tls.Config{
+	return tls.Dial(network, as.Addr, &tls.Config{
 		RootCAs: roots,
 	})
 }
