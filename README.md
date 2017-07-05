@@ -1,6 +1,12 @@
 Redis Proxy
 ===========
 
+Build status (Travis)
+---------------------
+
+  * Master: ![status: master](https://travis-ci.org/Codility/redis-proxy.svg?branch=master)
+  * Develop: ![status: develop](https://travis-ci.org/Codility/redis-proxy.svg?branch=develop)
+
 Build
 -----
 
