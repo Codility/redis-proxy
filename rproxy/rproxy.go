@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"gitlab.codility.net/marcink/redis-proxy/resp"
+	"github.com/codility/redis-proxy/resp"
 )
 
 type ConfigHolder interface {

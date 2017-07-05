@@ -1,4 +1,4 @@
-gopkg='gitlab.codility.net/marcink/redis-proxy' # TODO: automatic detection
+gopkg='github.com/codility/redis-proxy' # TODO: automatic detection
 repo_root="$(git rev-parse --show-toplevel)"
 export GOPATH="${repo_root}/.gopath"
 export GOBIN="${GOPATH}/bin"
