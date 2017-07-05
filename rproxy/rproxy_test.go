@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/stvp/assert"
-	"github.com/codility/redis-proxy/fakeredis"
-	"github.com/codility/redis-proxy/resp"
+	"github.com/Codility/redis-proxy/fakeredis"
+	"github.com/Codility/redis-proxy/resp"
 )
 
 const BaseTestRedisPort = 7300

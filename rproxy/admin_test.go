@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stvp/assert"
-	"github.com/codility/redis-proxy/fakeredis"
+	"github.com/Codility/redis-proxy/fakeredis"
 )
 
 func TestProxyAdminNonTLS(t *testing.T) {

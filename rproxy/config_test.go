@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codility/redis-proxy/fakeredis"
+	"github.com/Codility/redis-proxy/fakeredis"
 )
 
 func TestConfigValidation(t *testing.T) {

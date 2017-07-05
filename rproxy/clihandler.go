@@ -4,7 +4,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/codility/redis-proxy/resp"
+	"github.com/Codility/redis-proxy/resp"
 )
 
 type CliHandler struct {

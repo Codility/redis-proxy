@@ -3,7 +3,7 @@ package rproxy
 import (
 	"time"
 
-	"github.com/codility/redis-proxy/resp"
+	"github.com/Codility/redis-proxy/resp"
 )
 
 ////////////////////////////////////////

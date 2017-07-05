@@ -14,7 +14,7 @@ The repository includes all dependencies other than standard library.
 You need go 1.8.x.
 
 
-    $ git clone git@gitlab.codility.net:marcink/redis-proxy.git
+    $ git clone git@github.com:Codility/redis-proxy.git
     $ cd redis-proxy
     $ make
 

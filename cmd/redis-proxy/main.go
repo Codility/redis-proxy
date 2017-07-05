@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/codility/redis-proxy/rproxy"
+	"github.com/Codility/redis-proxy/rproxy"
 )
 
 var (
