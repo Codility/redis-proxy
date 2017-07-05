@@ -30,7 +30,7 @@ test: redis-proxy
 	$(MAKE) -f Makefile test
 
 
-TARBALL=$(shell git rev-parse HEAD).tar.gz
+TARBALL=$(shell git rev-parse HEAD).tgz
 
 # See redis-proxy build on Jenkins. Note that this expects AWS configuration
 # variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) in the environment.
