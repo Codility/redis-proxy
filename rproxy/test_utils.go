@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stvp/assert"
-	"gitlab.codility.net/marcink/redis-proxy/resp"
+	"github.com/codility/redis-proxy/resp"
 )
 
 ////////////////////////////////////////

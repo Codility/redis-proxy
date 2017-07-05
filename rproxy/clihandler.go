@@ -4,7 +4,7 @@ import (
 	"io"
 	"log"
 
-	"gitlab.codility.net/marcink/redis-proxy/resp"
+	"github.com/codility/redis-proxy/resp"
 )
 
 type CliHandler struct {
