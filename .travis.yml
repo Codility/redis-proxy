@@ -1,0 +1,4 @@
+language: go
+script:
+  - make redis-proxy switch-test
+  - make test
