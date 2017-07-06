@@ -23,7 +23,6 @@ import (
 type FakeRedisServer struct {
 	name string
 
-	network  string
 	listener net.Listener
 
 	mu       sync.Mutex
@@ -31,16 +30,16 @@ type FakeRedisServer struct {
 	requests []*resp.Msg
 }
 
-func New(name string, network string) *FakeRedisServer {
-	return &FakeRedisServer{name: name, network: network}
+func New(name string) *FakeRedisServer {
+	return &FakeRedisServer{name: name}
 }
 
-func Start(name string, network string) *FakeRedisServer {
+func Start(name, network string) *FakeRedisServer {
 	startedChan := make(chan struct{})
 
-	srv := New(name, network)
+	srv := New(name)
 
-	go srv.Run(startedChan)
+	go srv.Run(startedChan, network)
 	<-startedChan
 
 	return srv
@@ -60,18 +59,12 @@ func (s *FakeRedisServer) Requests() []*resp.Msg {
 	return s.requests
 }
 
-func (s *FakeRedisServer) Run(startedChan chan struct{}) {
+func (s *FakeRedisServer) Run(startedChan chan struct{}, network string) {
 	var err error
-	var tcpListener *net.TCPListener
-	var unixListener *net.UnixListener
 
-	switch s.network {
+	switch network {
 	case "tcp":
-		tcpListener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
-		if err != nil {
-			panic(err)
-		}
-		s.listener = tcpListener
+		s.listener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 
 	case "unix":
 		dir, err := ioutil.TempDir("/tmp", "fakeredis")
@@ -81,14 +74,13 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 		defer os.RemoveAll(dir)
 
 		name := dir + "/fakeredis.sock"
-		unixListener, err = net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
-		if err != nil {
-			panic(err)
-		}
-		s.listener = unixListener
+		s.listener, err = net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
 
 	default:
-		panic("Unknown network: " + s.network)
+		panic("Unknown network: " + network)
+	}
+	if err != nil {
+		panic(err)
 	}
 	defer s.listener.Close()
 
@@ -97,11 +89,11 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 	}
 
 	for !s.IsShuttingDown() {
-		switch s.network {
+		switch network {
 		case "tcp":
-			tcpListener.SetDeadline(time.Now().Add(time.Second))
+			s.listener.(*net.TCPListener).SetDeadline(time.Now().Add(time.Second))
 		case "unix":
-			unixListener.SetDeadline(time.Now().Add(time.Second))
+			s.listener.(*net.UnixListener).SetDeadline(time.Now().Add(time.Second))
 		}
 
 		conn, err := s.listener.Accept()
