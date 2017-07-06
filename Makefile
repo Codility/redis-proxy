@@ -29,6 +29,12 @@ run: redis-proxy config.json
 
 .PHONY: test
 test:
+	@echo "Running gofmt..."
+	@if ! find -name '*.go' | xargs gofmt -d; then \
+		echo "gofmt failed!"; \
+		exit 1; \
+	fi
+	@echo "gofmt passed"
 	./scripts/go test -v github.com/Codility/redis-proxy/fakeredis/
 	./scripts/go test -v github.com/Codility/redis-proxy/resp/
 	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
