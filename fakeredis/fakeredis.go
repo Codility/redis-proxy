@@ -10,10 +10,12 @@ package fakeredis
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"sync"
 	"time"
+	"os"
 
 	"github.com/codility/redis-proxy/resp"
 )
@@ -21,23 +23,24 @@ import (
 type FakeRedisServer struct {
 	name string
 
-	listener *net.TCPListener
+	network string
+	listener net.Listener
 
 	mu       sync.Mutex
 	shutdown bool
 	requests []*resp.Msg
 }
 
-func New(name string) *FakeRedisServer {
-	return &FakeRedisServer{name: name}
+func New(name string, network string) *FakeRedisServer {
+	return &FakeRedisServer{name: name, network: network}
 }
 
-func Start(name string) *FakeRedisServer {
+func Start(name string, network string) *FakeRedisServer {
 	startedChan := make(chan struct{})
 
-	srv := New(name)
-	go srv.Run(startedChan)
+	srv := New(name, network)
 
+	go srv.Run(startedChan)
 	<-startedChan
 
 	return srv
@@ -59,10 +62,33 @@ func (s *FakeRedisServer) Requests() []*resp.Msg {
 
 func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 	var err error
+	var tcpListener *net.TCPListener
+	var unixListener *net.UnixListener
 
-	s.listener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
-	if err != nil {
-		panic(err)
+	switch s.network {
+	case "tcp":
+		tcpListener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
+		if err != nil {
+			panic(err)
+		}
+		s.listener = tcpListener
+
+	case "unix":
+		dir, err := ioutil.TempDir("/tmp", "fakeredis")
+		if err != nil {
+			panic(err)
+		}
+		defer os.RemoveAll(dir)
+
+		name := dir + "/fakeredis.sock"
+		unixListener, err = net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
+		if err != nil {
+			panic(err)
+		}
+		s.listener = unixListener
+
+	default:
+		panic("Unknown network: " + s.network)
 	}
 	defer s.listener.Close()
 
@@ -71,8 +97,14 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 	}
 
 	for !s.IsShuttingDown() {
-		s.listener.SetDeadline(time.Now().Add(time.Second))
-		conn, err := s.listener.AcceptTCP()
+		switch s.network {
+		case "tcp":
+			tcpListener.SetDeadline(time.Now().Add(time.Second))
+		case "unix":
+			unixListener.SetDeadline(time.Now().Add(time.Second))
+		}
+
+		conn, err := s.listener.Accept()
 		if err != nil {
 			if resp.IsNetTimeout(err) {
 				continue
@@ -96,7 +128,7 @@ func (s *FakeRedisServer) Addr() net.Addr {
 	return s.listener.Addr()
 }
 
-func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
+func (s *FakeRedisServer) handleConnection(conn net.Conn) {
 	rc := resp.NewConn(conn, 100, false)
 	defer rc.Close()
 

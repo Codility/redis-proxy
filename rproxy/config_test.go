@@ -24,7 +24,7 @@ func TestConfigValidation(t *testing.T) {
 	}
 
 	// prepare servers to connect to.
-	srv_nonTLS := fakeredis.Start("fake")
+	srv_nonTLS := fakeredis.Start("fake", "tcp")
 	defer srv_nonTLS.Stop()
 	nonTLSAddr := srv_nonTLS.Addr().String()
 

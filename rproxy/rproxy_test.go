@@ -22,7 +22,7 @@ import (
 const BaseTestRedisPort = 7300
 
 func TestProxy(t *testing.T) {
-	srv := fakeredis.Start("fake")
+	srv := fakeredis.Start("fake", "tcp")
 	defer srv.Stop()
 
 	proxy, err := NewProxy(&TestConfigLoader{
@@ -46,7 +46,7 @@ func TestProxy(t *testing.T) {
 }
 
 func TestProxyTLS(t *testing.T) {
-	srv := fakeredis.Start("fake")
+	srv := fakeredis.Start("fake", "tcp")
 	defer srv.Stop()
 
 	proxy, err := NewProxy(&TestConfigLoader{
@@ -85,7 +85,7 @@ func TestProxyTLS(t *testing.T) {
 }
 
 func TestProxyUplinkTLS(t *testing.T) {
-	srv := fakeredis.Start("fake")
+	srv := fakeredis.Start("fake", "tcp")
 	defer srv.Stop()
 
 	firstProxy := mustStartTestProxy(t, &TestConfigLoader{
@@ -121,10 +121,28 @@ func TestProxyUplinkTLS(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 }
 
+func TestProxyUplinkUnix(t *testing.T) {
+	srv := fakeredis.Start("fake", "unix")
+	defer srv.Stop()
+
+	proxy := mustStartTestProxy(t, &TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: srv.Addr().String(), Network: "unix"},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin: AddrSpec{Addr: "127.0.0.1:0"},
+		}})
+	defer proxy.controller.Stop()
+
+	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	resp, err := c.Call(resp.MsgFromStrings("get", "a"))
+	assert.Nil(t, err)
+	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
+}
+
 func TestProxySwitch(t *testing.T) {
-	srv_0 := fakeredis.Start("srv-0")
+	srv_0 := fakeredis.Start("srv-0", "tcp")
 	defer srv_0.Stop()
-	srv_1 := fakeredis.Start("srv-1")
+	srv_1 := fakeredis.Start("srv-1", "tcp")
 	defer srv_1.Stop()
 
 	conf := &TestConfigLoader{
@@ -162,7 +180,7 @@ func TestProxyRejectsBrokenConfigOnStart(t *testing.T) {
 }
 
 func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
-	srv_0 := fakeredis.Start("srv-0")
+	srv_0 := fakeredis.Start("srv-0", "tcp")
 	defer srv_0.Stop()
 
 	conf := &TestConfigLoader{
@@ -193,7 +211,7 @@ func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
 }
 
 func TestProxyAuthenticatesClient(t *testing.T) {
-	srv := fakeredis.Start("srv")
+	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
@@ -229,7 +247,7 @@ func TestProxyAuthenticatesClient(t *testing.T) {
 }
 
 func TestOpenProxyBlocksAuthCommands(t *testing.T) {
-	srv := fakeredis.Start("srv")
+	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
@@ -296,9 +314,9 @@ func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 }
 
 func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
-	srv_0 := fakeredis.Start("srv-0")
+	srv_0 := fakeredis.Start("srv-0", "tcp")
 	defer srv_0.Stop()
-	srv_1 := fakeredis.Start("srv-1")
+	srv_1 := fakeredis.Start("srv-1", "tcp")
 	defer srv_1.Stop()
 
 	conf := NewTestConfigLoader(srv_0.Addr().String())
@@ -326,7 +344,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 }
 
 func TestProxyKillsConnectionOnBrokenCommands(t *testing.T) {
-	srv := fakeredis.Start("srv")
+	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
 
 	proxy := mustStartTestProxy(t, NewTestConfigLoader(srv.Addr().String()))
