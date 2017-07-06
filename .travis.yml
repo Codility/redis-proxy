@@ -1,8 +1,4 @@
 language: go
-addons:
-  apt:
-    packages:
-      - golang-golang-x-tools
 script:
   - make redis-proxy switch-test
   - make test

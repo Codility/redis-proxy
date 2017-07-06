@@ -28,18 +28,22 @@ run: redis-proxy config.json
 	./redis-proxy config.json
 
 .PHONY: test
-test:
+test: goimports
+	./scripts/go test -v github.com/Codility/redis-proxy/fakeredis/
+	./scripts/go test -v github.com/Codility/redis-proxy/resp/
+	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
+
+.PHONY: goimports
+goimports:
+	./scripts/go get golang.org/x/tools/cmd/goimports
 	@echo "Running goimports..."
-	@output=$$(find -name '*.go' -and -not -path './vendor/*' | xargs goimports -d) && \
+	@output=$$(find -name '*.go' -and -not -path './vendor/*' -and -not -path './.gopath/*' | xargs ./.gopath/bin/goimports -d) && \
 		if ! [ -z "$$output" ]; then \
 			echo "$$output"; \
 			echo "goimports failed!"; \
 			exit 1; \
 		fi
 	@echo "goimports passed"
-	./scripts/go test -v github.com/Codility/redis-proxy/fakeredis/
-	./scripts/go test -v github.com/Codility/redis-proxy/resp/
-	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
 
 ########################################
 # switch-test and related targets
