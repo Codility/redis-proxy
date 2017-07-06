@@ -29,12 +29,14 @@ run: redis-proxy config.json
 
 .PHONY: test
 test:
-	@echo "Running gofmt..."
-	@if ! find -name '*.go' | xargs gofmt -d; then \
-		echo "gofmt failed!"; \
-		exit 1; \
-	fi
-	@echo "gofmt passed"
+	@echo "Running goimports..."
+	@output=$$(find -name '*.go' -and -not -path './vendor/*' | xargs goimports -d) && \
+		if ! [ -z "$$output" ]; then \
+			echo "$$output"; \
+			echo "goimports failed!"; \
+			exit 1; \
+		fi
+	@echo "goimports passed"
 	./scripts/go test -v github.com/Codility/redis-proxy/fakeredis/
 	./scripts/go test -v github.com/Codility/redis-proxy/resp/
 	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
