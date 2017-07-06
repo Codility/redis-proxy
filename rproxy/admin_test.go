@@ -14,7 +14,7 @@ import (
 )
 
 func TestProxyAdminNonTLS(t *testing.T) {
-	srv := fakeredis.Start("srv")
+	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{
@@ -33,7 +33,7 @@ func TestProxyAdminNonTLS(t *testing.T) {
 }
 
 func TestProxyAdminTLS(t *testing.T) {
-	srv := fakeredis.Start("srv")
+	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
 
 	conf := &TestConfigLoader{

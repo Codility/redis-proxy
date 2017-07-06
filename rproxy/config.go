@@ -49,9 +49,10 @@ func (l *ErrorList) AsError() error {
 // AddrSpec
 
 type AddrSpec struct {
-	Addr string `json:"addr"`
-	Pass string `json:"pass"`
-	TLS  bool   `json:"tls"`
+	Addr    string `json:"addr"`
+	Pass    string `json:"pass"`
+	TLS     bool   `json:"tls"`
+	Network string `json:"network"`
 
 	CertFile   string `json:"certfile"`
 	KeyFile    string `json:"keyfile"`
@@ -67,8 +68,16 @@ func (as *AddrSpec) AsJSON() string {
 }
 
 func (as *AddrSpec) Dial() (net.Conn, error) {
+	network := "tcp"
+	if as.Network != "" {
+		network = as.Network
+	}
+	if !(network == "tcp" || network == "unix") {
+		return nil, errors.New("Unsupported network for dialing: " + network)
+	}
+
 	if !as.TLS {
-		return net.Dial("tcp", as.Addr)
+		return net.Dial(network, as.Addr)
 	}
 
 	// TODO: read the PEM once, not at every accept
@@ -85,7 +94,7 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 		return nil, err
 	}
 
-	return tls.Dial("tcp", as.Addr, &tls.Config{
+	return tls.Dial(network, as.Addr, &tls.Config{
 		RootCAs: roots,
 	})
 }
@@ -101,6 +110,11 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 // listener from tls package does not support them, and does not
 // provide any way to get to the underlying TCPListener.
 func (as *AddrSpec) Listen() (net.Listener, *net.TCPListener, *net.Addr, error) {
+	if !(as.Network == "" || as.Network == "tcp") {
+		err := errors.New("Only TCP network supported for listening")
+		return nil, nil, nil, err
+	}
+
 	ln, err := net.Listen("tcp", as.Addr)
 	if err != nil {
 		log.Fatalf("Could not listen: %s", err)

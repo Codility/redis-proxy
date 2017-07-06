@@ -10,8 +10,10 @@ package fakeredis
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -21,7 +23,7 @@ import (
 type FakeRedisServer struct {
 	name string
 
-	listener *net.TCPListener
+	listener net.Listener
 
 	mu       sync.Mutex
 	shutdown bool
@@ -32,12 +34,12 @@ func New(name string) *FakeRedisServer {
 	return &FakeRedisServer{name: name}
 }
 
-func Start(name string) *FakeRedisServer {
+func Start(name, network string) *FakeRedisServer {
 	startedChan := make(chan struct{})
 
 	srv := New(name)
-	go srv.Run(startedChan)
 
+	go srv.Run(startedChan, network)
 	<-startedChan
 
 	return srv
@@ -57,10 +59,26 @@ func (s *FakeRedisServer) Requests() []*resp.Msg {
 	return s.requests
 }
 
-func (s *FakeRedisServer) Run(startedChan chan struct{}) {
+func (s *FakeRedisServer) Run(startedChan chan struct{}, network string) {
 	var err error
 
-	s.listener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
+	switch network {
+	case "tcp":
+		s.listener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
+
+	case "unix":
+		dir, err := ioutil.TempDir("/tmp", "fakeredis")
+		if err != nil {
+			panic(err)
+		}
+		defer os.RemoveAll(dir)
+
+		name := dir + "/fakeredis.sock"
+		s.listener, err = net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
+
+	default:
+		panic("Unknown network: " + network)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -71,8 +89,14 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}) {
 	}
 
 	for !s.IsShuttingDown() {
-		s.listener.SetDeadline(time.Now().Add(time.Second))
-		conn, err := s.listener.AcceptTCP()
+		switch network {
+		case "tcp":
+			s.listener.(*net.TCPListener).SetDeadline(time.Now().Add(time.Second))
+		case "unix":
+			s.listener.(*net.UnixListener).SetDeadline(time.Now().Add(time.Second))
+		}
+
+		conn, err := s.listener.Accept()
 		if err != nil {
 			if resp.IsNetTimeout(err) {
 				continue
@@ -96,7 +120,7 @@ func (s *FakeRedisServer) Addr() net.Addr {
 	return s.listener.Addr()
 }
 
-func (s *FakeRedisServer) handleConnection(conn *net.TCPConn) {
+func (s *FakeRedisServer) handleConnection(conn net.Conn) {
 	rc := resp.NewConn(conn, 100, false)
 	defer rc.Close()
 
