@@ -73,8 +73,7 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 		network = as.Network
 	}
 	if !(network == "tcp" || network == "unix") {
-		err := errors.New("Unsupported network for dialing: " + network)
-		return nil, err
+		return nil, errors.New("Unsupported network for dialing: " + network)
 	}
 
 	if !as.TLS {
