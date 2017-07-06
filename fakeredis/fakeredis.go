@@ -13,9 +13,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
-	"os"
 
 	"github.com/codility/redis-proxy/resp"
 )
@@ -23,7 +23,7 @@ import (
 type FakeRedisServer struct {
 	name string
 
-	network string
+	network  string
 	listener net.Listener
 
 	mu       sync.Mutex

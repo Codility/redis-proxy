@@ -49,9 +49,9 @@ func (l *ErrorList) AsError() error {
 // AddrSpec
 
 type AddrSpec struct {
-	Addr string `json:"addr"`
-	Pass string `json:"pass"`
-	TLS  bool   `json:"tls"`
+	Addr    string `json:"addr"`
+	Pass    string `json:"pass"`
+	TLS     bool   `json:"tls"`
 	Network string `json:"network"`
 
 	CertFile   string `json:"certfile"`

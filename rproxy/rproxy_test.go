@@ -129,7 +129,7 @@ func TestProxyUplinkUnix(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String(), Network: "unix"},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		}})
 	defer proxy.controller.Stop()
 
