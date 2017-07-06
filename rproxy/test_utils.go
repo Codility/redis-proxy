@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stvp/assert"
 	"github.com/Codility/redis-proxy/resp"
+	"github.com/stvp/assert"
 )
 
 ////////////////////////////////////////
