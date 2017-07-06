@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stvp/assert"
 	"github.com/Codility/redis-proxy/fakeredis"
+	"github.com/stvp/assert"
 )
 
 func TestProxyAdminNonTLS(t *testing.T) {
