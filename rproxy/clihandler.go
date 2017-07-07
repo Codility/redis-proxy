@@ -1,7 +1,6 @@
 package rproxy
 
 import (
-	"io"
 	"log"
 
 	"github.com/Codility/redis-proxy/resp"
@@ -99,12 +98,10 @@ func (ch *CliHandler) dialUplink(config *Config) error {
 func (ch *CliHandler) readMsgFromClient() *resp.Msg {
 	req, err := ch.cliConn.ReadMsg()
 	if err != nil {
-		if err != io.EOF {
-			log.Printf("Could not read from %s: %v\n",
-				ch.cliConn.RemoteAddr().String(),
-				err)
-			ch.done = true
-		}
+		ch.done = true
+		log.Printf("Could not read from %s: %v\n",
+			ch.cliConn.RemoteAddr().String(),
+			err)
 		return nil
 	}
 	return req
