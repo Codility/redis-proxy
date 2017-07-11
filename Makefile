@@ -28,10 +28,17 @@ run: redis-proxy config.json
 	./redis-proxy config.json
 
 .PHONY: test
-test: goimports
+test: goimports govet
 	./scripts/go test -v github.com/Codility/redis-proxy/fakeredis/
 	./scripts/go test -v github.com/Codility/redis-proxy/resp/
 	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
+
+.PHONY: govet
+govet:
+	find . -name \*.go | \
+		grep -vE '(.gopath/|/vendor/)' | \
+		while read f; do echo `dirname "$$f"`; done | uniq | \
+		while read d; do echo go vet "$$d"; go vet "$$d"; done
 
 .PHONY: goimports
 goimports:

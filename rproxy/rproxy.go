@@ -108,7 +108,7 @@ func (proxy *Proxy) RequiresClientAuth() bool {
 func (proxy *Proxy) ReloadConfig() {
 	newConfig, err := proxy.configLoader.Load()
 	if err != nil {
-		log.Printf("Got an error while loading %s: %s.  Keeping old config.", proxy, err)
+		log.Printf("Got an error while loading %v: %s.  Keeping old config.", proxy, err)
 		return
 	}
 
