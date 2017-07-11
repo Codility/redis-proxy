@@ -37,7 +37,7 @@ test: goimports
 goimports:
 	./scripts/go get golang.org/x/tools/cmd/goimports
 	@echo "Running goimports..."
-	@output=$$(find -name '*.go' -and -not -path './vendor/*' -and -not -path './.gopath/*' | xargs ./.gopath/bin/goimports -d) && \
+	@output=$$(find . -name '*.go' -and -not -path './vendor/*' -and -not -path './.gopath/*' | xargs ./.gopath/bin/goimports -d) && \
 		if ! [ -z "$$output" ]; then \
 			echo "$$output"; \
 			echo "goimports failed!"; \
