@@ -12,10 +12,6 @@ redis-proxy: rproxy/*.go cmd/redis-proxy/*.go
 clean:
 	rm -rf $(BINARIES) .gopath
 
-#.PHONY: test
-#test:
-#	./scripts/go test
-
 .PHONY: config
 config: config.json
 
