@@ -36,8 +36,7 @@ test: goimports govet
 .PHONY: govet
 govet:
 	find . -name '*.go' -and -not -path './vendor/*' -and -not -path './.gopath/*' | \
-		while read f; do echo `dirname "$$f"`; done | uniq | \
-		while read d; do echo go vet "$$d"; go vet "$$d"; done
+		while read f; do echo `dirname "$$f"`; done | uniq | xargs go tool vet
 
 .PHONY: goimports
 goimports:
