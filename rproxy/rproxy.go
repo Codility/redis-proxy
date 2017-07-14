@@ -6,9 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	"github.com/Codility/redis-proxy/resp"
 )
 
 type ConfigHolder interface {
@@ -19,8 +16,8 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader          ConfigLoader
 	config                *Config
-	controller            *Controller
 	listenAddr, adminAddr *net.Addr
+	controllerProc        *ControllerProc
 }
 
 func NewProxy(cl ConfigLoader) (*Proxy, error) {
@@ -38,44 +35,25 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 
 	proxy := &Proxy{
 		configLoader: cl,
-		config:       config,
-		controller:   NewController()}
+		config:       config}
 	return proxy, nil
 }
 
 func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
-	ln, tcpLn, addr, err := proxy.config.Listen.Listen()
-	if err != nil {
-		return err
-	}
-	defer ln.Close()
-
-	proxy.listenAddr = addr
-	log.Println("Listening on", proxy.ListenAddr())
-
-	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
 	proxy.publishAdminInterface()
 
+	if err := proxy.startConnAcceptor(); err != nil {
+		return err
+	}
+	log.Println("Listening on", proxy.ListenAddr())
 	go proxy.watchSignals()
 
 	if doneChan != nil {
 		doneChan <- struct{}{}
 	}
 
-	for proxy.controller.Alive() {
-		tcpLn.SetDeadline(time.Now().Add(time.Second))
-		conn, err := ln.Accept()
-		if err != nil {
-			if resp.IsNetTimeout(err) {
-				continue
-			}
-			log.Fatalf("Admin interface: %s", err)
-			return err
-		} else {
-			ch := NewCliHandler(resp.NewConn(conn, 0, proxy.config.LogMessages), proxy)
-			go ch.Run()
-		}
-	}
+	proxy.runControllerProc()
+
 	return nil
 }
 
@@ -90,7 +68,7 @@ func (proxy *Proxy) Start() {
 }
 
 func (proxy *Proxy) Alive() bool {
-	return proxy.controller.Alive()
+	return proxy.controllerProc != nil
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
@@ -130,7 +108,7 @@ func (proxy *Proxy) watchSignals() {
 	for {
 		s := <-c
 		log.Printf("Got signal: %v, reloading config\n", s)
-		proxy.controller.Reload()
+		proxy.Reload()
 	}
 }
 

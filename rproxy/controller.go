@@ -10,7 +10,7 @@ import (
 // Controller interface
 
 const (
-	ProxyStopped = ControllerState(iota)
+	ProxyStarting = ControllerState(iota)
 	ProxyRunning
 	ProxyPausing
 	ProxyPaused
@@ -30,15 +30,11 @@ const (
 	MaxConnections = 1000
 )
 
-type Controller struct {
-	proc *ControllerProc
-}
-
 type ControllerState int
 type ControllerCommand int
 
 var controllerStateTxt = [...]string{
-	"stopped",
+	"starting",
 	"running",
 	"pausing",
 	"reloading",
@@ -56,101 +52,83 @@ type ControllerInfo struct {
 	Config          *Config
 }
 
-func NewController() *Controller {
-	return &Controller{}
-}
-
-func (controller *Controller) CallUplink(block func() (*resp.Msg, error)) (*resp.Msg, error) {
-	controller.enterExecution()
-	defer controller.leaveExecution()
+func (proxy *Proxy) CallUplink(block func() (*resp.Msg, error)) (*resp.Msg, error) {
+	proxy.enterExecution()
+	defer proxy.leaveExecution()
 
 	return block()
 }
 
-func (controller *Controller) GetInfo() *ControllerInfo {
-	if controller.proc == nil {
-		return &ControllerInfo{State: ProxyStopped}
+func (proxy *Proxy) GetInfo() *ControllerInfo {
+	if proxy.controllerProc == nil {
+		return &ControllerInfo{State: ProxyStarting}
 	}
 	ch := make(chan *ControllerInfo)
-	controller.proc.channels.info <- ch
+	proxy.controllerProc.channels.info <- ch
 	return <-ch
 }
 
-func (controller *Controller) Pause() {
-	controller.proc.channels.command <- CmdPause
+func (proxy *Proxy) Pause() {
+	proxy.controllerProc.channels.command <- CmdPause
 }
 
-func (controller *Controller) PauseAndWait() {
+func (proxy *Proxy) PauseAndWait() {
 	// TODO: push the state change instead of having the client
 	// poll
-	controller.proc.channels.command <- CmdPause
+	proxy.controllerProc.channels.command <- CmdPause
 	for {
-		if controller.GetInfo().ActiveRequests == 0 {
+		if proxy.GetInfo().ActiveRequests == 0 {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
-func (controller *Controller) Unpause() {
-	controller.proc.channels.command <- CmdUnpause
+func (proxy *Proxy) Unpause() {
+	proxy.controllerProc.channels.command <- CmdUnpause
 }
 
-func (controller *Controller) Reload() {
-	controller.proc.channels.command <- CmdReload
+func (proxy *Proxy) Reload() {
+	proxy.controllerProc.channels.command <- CmdReload
 }
 
-func (controller *Controller) ReloadAndWait() {
-	controller.Reload()
+func (proxy *Proxy) ReloadAndWait() {
+	proxy.Reload()
 	for {
-		if controller.GetInfo().State == ProxyRunning {
+		if proxy.GetInfo().State == ProxyRunning {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
 }
 
-func (controller *Controller) Start(ch ConfigHolder) {
-	go controller.run(ch)
+func (proxy *Proxy) Stop() {
+	proxy.controllerProc.channels.command <- CmdStop
 	for {
-		if controller.GetInfo().State == ProxyRunning {
+		if proxy.controllerProc == nil {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-}
-
-func (controller *Controller) Stop() {
-	controller.proc.channels.command <- CmdStop
-	for {
-		if controller.proc == nil {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-}
-
-func (controller *Controller) Alive() bool {
-	return controller.proc != nil
 }
 
 ////////////////////////////////////////
 // Controller implementation
 
-func (controller *Controller) run(confHolder ConfigHolder) {
-	controller.proc = NewControllerProc(confHolder)
+func (proxy *Proxy) runControllerProc() {
+	proxy.controllerProc = NewControllerProc(proxy)
 	defer func() {
-		controller.proc = nil
+		proxy.controllerProc = nil
 	}()
-	controller.proc.run()
+	proxy.controllerProc.run()
 }
 
-func (controller *Controller) enterExecution() {
+func (proxy *Proxy) enterExecution() {
 	ch := make(chan struct{})
-	controller.proc.channels.requestPermission <- ch
+	proxy.controllerProc.channels.requestPermission <- ch
 	<-ch
 }
 
-func (controller *Controller) leaveExecution() {
-	controller.proc.channels.releasePermission <- struct{}{}
+func (proxy *Proxy) leaveExecution() {
+	proxy.controllerProc.channels.releasePermission <- struct{}{}
 }

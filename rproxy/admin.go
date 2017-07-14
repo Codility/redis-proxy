@@ -64,7 +64,7 @@ const statusHtml = `<!DOCTYPE html>
 `
 
 func (proxy *Proxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
-	st := proxy.controller.GetInfo()
+	st := proxy.GetInfo()
 	info := map[string]interface{}{
 		"activeRequests": st.ActiveRequests,
 		"config":         st.Config,
@@ -90,13 +90,13 @@ func (proxy *Proxy) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 		log.Println("Received cmd:", cmd)
 		switch cmd {
 		case "pause":
-			proxy.controller.Pause()
+			proxy.Pause()
 		case "pause-and-wait":
-			proxy.controller.PauseAndWait()
+			proxy.PauseAndWait()
 		case "unpause":
-			proxy.controller.Unpause()
+			proxy.Unpause()
 		case "reload":
-			proxy.controller.Reload()
+			proxy.Reload()
 		default:
 			http.Error(w, fmt.Sprintf("Unknown cmd: '%s'", cmd), http.StatusBadRequest)
 			return

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Codility/redis-proxy/resp"
 	"github.com/stvp/assert"
 )
 
@@ -30,23 +29,23 @@ func (ch *TestConfigHolder) ReloadConfig() {
 ////////////////////////////////////////
 // TestRequest
 
-type TestRequest struct {
-	contr *Controller
-	done  bool
-	block func()
-}
-
-func NewTestRequest(contr *Controller, block func()) *TestRequest {
-	return &TestRequest{contr: contr, block: block}
-}
-
-func (r *TestRequest) Do() {
-	r.contr.CallUplink(func() (*resp.Msg, error) {
-		r.block()
-		return nil, nil
-	})
-	r.done = true
-}
+// type TestRequest struct {
+// 	contr *Controller
+// 	done  bool
+// 	block func()
+// }
+//
+// func NewTestRequest(contr *Controller, block func()) *TestRequest {
+// 	return &TestRequest{contr: contr, block: block}
+// }
+//
+// func (r *TestRequest) Do() {
+// 	r.contr.CallUplink(func() (*resp.Msg, error) {
+// 		r.block()
+// 		return nil, nil
+// 	})
+// 	r.done = true
+// }
 
 ////////////////////////////////////////
 // Other plumbing

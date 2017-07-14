@@ -40,7 +40,7 @@ func TestConfigValidation(t *testing.T) {
 			Admin: AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
-	defer proxy_TLS.controller.Stop()
+	defer proxy_TLS.Stop()
 	TLSAddr := strings.Replace(proxy_TLS.ListenAddr().String(), "127.0.0.1", "localhost", -1)
 
 	// non-TLS configurations

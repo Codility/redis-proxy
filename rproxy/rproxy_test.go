@@ -41,7 +41,7 @@ func TestProxy(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
-	proxy.controller.Stop()
+	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.Alive() })
 }
 
@@ -80,7 +80,7 @@ func TestProxyTLS(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
-	proxy.controller.Stop()
+	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.Alive() })
 }
 
@@ -100,7 +100,7 @@ func TestProxyUplinkTLS(t *testing.T) {
 			Admin: AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
-	defer firstProxy.controller.Stop()
+	defer firstProxy.Stop()
 
 	laddr := strings.Replace(firstProxy.ListenAddr().String(), "127.0.0.1", "localhost", -1)
 	secondProxy := mustStartTestProxy(t, &TestConfigLoader{
@@ -113,7 +113,7 @@ func TestProxyUplinkTLS(t *testing.T) {
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
-	defer secondProxy.controller.Stop()
+	defer secondProxy.Stop()
 
 	c := resp.MustDial("tcp", secondProxy.ListenAddr().String(), 0, false)
 	resp, err := c.Call(resp.MsgFromStrings("get", "a"))
@@ -131,7 +131,7 @@ func TestProxyUplinkUnix(t *testing.T) {
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
 			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		}})
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	resp, err := c.Call(resp.MsgFromStrings("get", "a"))
@@ -154,7 +154,7 @@ func TestProxySwitch(t *testing.T) {
 	}
 
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
@@ -167,7 +167,7 @@ func TestProxySwitch(t *testing.T) {
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 
-	proxy.controller.ReloadAndWait()
+	proxy.ReloadAndWait()
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-1\r\n")
 }
@@ -192,7 +192,7 @@ func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
 	}
 
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
@@ -205,7 +205,7 @@ func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 
-	proxy.controller.ReloadAndWait()
+	proxy.ReloadAndWait()
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 }
@@ -223,7 +223,7 @@ func TestProxyAuthenticatesClient(t *testing.T) {
 	}
 
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t,
@@ -259,7 +259,7 @@ func TestOpenProxyBlocksAuthCommands(t *testing.T) {
 	}
 
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t,
@@ -305,7 +305,7 @@ func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 	}
 
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	assert.Equal(t,
@@ -321,7 +321,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 
 	conf := NewTestConfigLoader(srv_0.Addr().String())
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	c.MustCall(resp.MsgFromStrings("SELECT", "1"))
@@ -336,7 +336,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
 		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
-	proxy.controller.ReloadAndWait()
+	proxy.ReloadAndWait()
 	c.MustCall(resp.MsgFromStrings("SET", "k", "v"))
 
 	assert.Equal(t, srv_1.ReqCnt(), 2)
@@ -348,7 +348,7 @@ func TestProxyKillsConnectionOnBrokenCommands(t *testing.T) {
 	defer srv.Stop()
 
 	proxy := mustStartTestProxy(t, NewTestConfigLoader(srv.Addr().String()))
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	resp := c.MustCall(resp.MsgFromStrings("SELECT", "X"))
