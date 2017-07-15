@@ -8,17 +8,17 @@ import (
 	"github.com/Codility/redis-proxy/resp"
 )
 
-func (proxy *Proxy) startConnAcceptor() error {
+func (proxy *Proxy) startListening() error {
 	ln, tcpLn, addr, err := proxy.config.Listen.Listen()
 	if err != nil {
 		return err
 	}
 	proxy.listenAddr = addr
-	go proxy.runConnAcceptor(ln, tcpLn)
+	go proxy.listenForClients(ln, tcpLn)
 	return nil
 }
 
-func (proxy *Proxy) runConnAcceptor(ln net.Listener, tcpLn *net.TCPListener) {
+func (proxy *Proxy) listenForClients(ln net.Listener, tcpLn *net.TCPListener) {
 	defer ln.Close()
 
 	for proxy.Alive() {
