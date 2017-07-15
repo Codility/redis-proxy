@@ -2,49 +2,49 @@ package rproxy
 
 import "log"
 
-type ControllerChannels struct {
+type ProxyChannels struct {
 	requestPermission chan chan struct{}
 	releasePermission chan struct{}
-	info              chan chan *ControllerInfo
-	command           chan ControllerCommand
+	info              chan chan *ProxyInfo
+	command           chan ProxyCommand
 }
 
-type ControllerProc struct {
-	channels ControllerChannels
+type ProxyProc struct {
+	channels ProxyChannels
 
 	confHolder     ConfigHolder
 	activeRequests int
-	state          ControllerState
+	state          ProxyState
 }
 
-func NewControllerProc(confHolder ConfigHolder) *ControllerProc {
-	return &ControllerProc{
-		channels: ControllerChannels{
+func NewProxyProc(confHolder ConfigHolder) *ProxyProc {
+	return &ProxyProc{
+		channels: ProxyChannels{
 			requestPermission: make(chan chan struct{}, MaxConnections),
 			releasePermission: make(chan struct{}, MaxConnections),
-			info:              make(chan chan *ControllerInfo),
-			command:           make(chan ControllerCommand),
+			info:              make(chan chan *ProxyInfo),
+			command:           make(chan ProxyCommand),
 		},
 		confHolder: confHolder,
 	}
 }
 
-func (p *ControllerProc) run() {
+func (p *ProxyProc) run() {
 	p.state = ProxyRunning
 
-	channelMap := map[ControllerState]*ControllerChannels{
+	channelMap := map[ProxyState]*ProxyChannels{
 		ProxyRunning: &p.channels,
-		ProxyPausing: &ControllerChannels{
+		ProxyPausing: &ProxyChannels{
 			requestPermission: nil,
 			releasePermission: p.channels.releasePermission,
 			info:              p.channels.info,
 			command:           nil},
-		ProxyReloading: &ControllerChannels{
+		ProxyReloading: &ProxyChannels{
 			requestPermission: nil,
 			releasePermission: p.channels.releasePermission,
 			info:              p.channels.info,
 			command:           nil},
-		ProxyPaused: &ControllerChannels{
+		ProxyPaused: &ProxyChannels{
 			requestPermission: nil,
 			releasePermission: nil,
 			info:              p.channels.info,
@@ -73,7 +73,7 @@ func (p *ControllerProc) run() {
 	}
 }
 
-func (p *ControllerProc) handleChannels(channels *ControllerChannels) {
+func (p *ProxyProc) handleChannels(channels *ProxyChannels) {
 	select {
 	case permCh := <-channels.requestPermission:
 		permCh <- struct{}{}
@@ -82,7 +82,7 @@ func (p *ControllerProc) handleChannels(channels *ControllerChannels) {
 		p.activeRequests--
 
 	case stateCh := <-channels.info:
-		stateCh <- &ControllerInfo{
+		stateCh <- &ProxyInfo{
 			ActiveRequests:  p.activeRequests,
 			WaitingRequests: len(p.channels.requestPermission),
 			State:           p.state,
@@ -99,7 +99,7 @@ func (p *ControllerProc) handleChannels(channels *ControllerChannels) {
 		case CmdStop:
 			p.state = ProxyStopping
 		default:
-			log.Print("Unknown controller command:", cmd)
+			log.Print("Unknown proxy command:", cmd)
 		}
 	}
 }

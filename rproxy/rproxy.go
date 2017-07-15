@@ -17,7 +17,7 @@ type Proxy struct {
 	configLoader          ConfigLoader
 	config                *Config
 	listenAddr, adminAddr *net.Addr
-	controllerProc        *ControllerProc
+	proc                  *ProxyProc
 }
 
 func NewProxy(cl ConfigLoader) (*Proxy, error) {
@@ -52,7 +52,7 @@ func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
 		doneChan <- struct{}{}
 	}
 
-	proxy.runControllerProc()
+	proxy.runProc()
 
 	return nil
 }
@@ -68,7 +68,7 @@ func (proxy *Proxy) Start() {
 }
 
 func (proxy *Proxy) Alive() bool {
-	return proxy.controllerProc != nil
+	return proxy.proc != nil
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
