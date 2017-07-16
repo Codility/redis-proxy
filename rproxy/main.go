@@ -54,10 +54,9 @@ func (proxy *Proxy) Run() {
 				continue
 			}
 		case ProxyRunning:
-			proxy.handleChannels(channelMap[st])
 		case ProxyPaused:
-			proxy.handleChannels(channelMap[st])
 		}
+		proxy.handleChannels(channelMap[st])
 	}
 
 	proxy.SetState(ProxyStopped)
