@@ -30,3 +30,7 @@ func (s ProxyState) String() string {
 func (s ProxyState) IsAlive() bool {
 	return (s != ProxyStopped && s != ProxyStarting && s != ProxyStopping)
 }
+
+func (s ProxyState) IsStartingOrAlive() bool {
+	return (s != ProxyStopped && s != ProxyStopping)
+}

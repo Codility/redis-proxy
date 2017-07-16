@@ -2,17 +2,20 @@ package rproxy
 
 import "log"
 
-func (proxy *Proxy) Run() error {
-	proxy.state = ProxyStarting
-	proxy.publishAdminInterface()
+func (proxy *Proxy) Run() {
+	proxy.SetState(ProxyStarting)
 
 	if err := proxy.startListening(); err != nil {
-		return err
+		log.Println("Could not start listening: ", err)
+		proxy.SetState(ProxyStopped)
+		return
 	}
 	log.Println("Listening on", proxy.ListenAddr())
+
+	proxy.publishAdminInterface()
 	go proxy.watchSignals()
 
-	proxy.state = ProxyRunning
+	proxy.SetState(ProxyRunning)
 
 	channelMap := map[ProxyState]*ProxyChannels{
 		ProxyRunning: &proxy.channels,
@@ -33,30 +36,31 @@ func (proxy *Proxy) Run() error {
 			command:           proxy.channels.command},
 	}
 
-	for proxy.state != ProxyStopping {
-		switch proxy.state {
-		case ProxyRunning:
-			// nothing
+	for {
+		st := proxy.State()
+		if st == ProxyStopping {
+			break
+		}
+		switch st {
 		case ProxyPausing:
 			if proxy.activeRequests == 0 {
-				proxy.state = ProxyPaused
+				proxy.SetState(ProxyPaused)
 				continue
 			}
 		case ProxyReloading:
 			if proxy.activeRequests == 0 {
 				proxy.ReloadConfig()
-				proxy.state = ProxyRunning
+				proxy.SetState(ProxyRunning)
 				continue
 			}
+		case ProxyRunning:
+			proxy.handleChannels(channelMap[st])
 		case ProxyPaused:
-			// nothing
+			proxy.handleChannels(channelMap[st])
 		}
-		proxy.handleChannels(channelMap[proxy.state])
 	}
 
-	proxy.state = ProxyStopped
-
-	return nil
+	proxy.SetState(ProxyStopped)
 }
 
 func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
@@ -71,19 +75,19 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 		stateCh <- &ProxyInfo{
 			ActiveRequests:  proxy.activeRequests,
 			WaitingRequests: len(proxy.channels.requestPermission),
-			State:           proxy.state,
+			State:           proxy.State(),
 			Config:          proxy.GetConfig()}
 
 	case cmd := <-channels.command:
 		switch cmd {
 		case CmdPause:
-			proxy.state = ProxyPausing
+			proxy.SetState(ProxyPausing)
 		case CmdUnpause:
-			proxy.state = ProxyRunning
+			proxy.SetState(ProxyRunning)
 		case CmdReload:
-			proxy.state = ProxyReloading
+			proxy.SetState(ProxyReloading)
 		case CmdStop:
-			proxy.state = ProxyStopping
+			proxy.SetState(ProxyStopping)
 		default:
 			log.Print("Unknown proxy command:", cmd)
 		}

@@ -21,7 +21,7 @@ func (proxy *Proxy) startListening() error {
 func (proxy *Proxy) listenForClients(ln net.Listener, tcpLn *net.TCPListener) {
 	defer ln.Close()
 
-	for proxy.Alive() {
+	for proxy.State().IsStartingOrAlive() {
 		tcpLn.SetDeadline(time.Now().Add(time.Second))
 		conn, err := ln.Accept()
 		if err != nil {

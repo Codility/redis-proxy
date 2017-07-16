@@ -34,7 +34,7 @@ func TestProxy(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	proxy.Start()
-	assert.True(t, proxy.Alive())
+	assert.True(t, proxy.State().IsAlive())
 
 	c := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
 	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
@@ -42,7 +42,7 @@ func TestProxy(t *testing.T) {
 	assert.Equal(t, srv.ReqCnt(), 1)
 
 	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.Alive() })
+	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
 }
 
 func TestProxyTLS(t *testing.T) {
@@ -63,7 +63,7 @@ func TestProxyTLS(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	proxy.Start()
-	assert.True(t, proxy.Alive())
+	assert.True(t, proxy.State().IsAlive())
 
 	certPEM, err := ioutil.ReadFile("../test_data/tls/testca/cacert.pem")
 	assert.Nil(t, err)
@@ -72,6 +72,7 @@ func TestProxyTLS(t *testing.T) {
 	assert.True(t, roots.AppendCertsFromPEM(certPEM))
 
 	addr := strings.Replace(proxy.ListenAddr().String(), "127.0.0.1", "localhost", -1)
+	//	time.Sleep(time.Second)
 	tlsc, err := tls.Dial("tcp", addr, &tls.Config{RootCAs: roots})
 	assert.Nil(t, err)
 
@@ -81,7 +82,7 @@ func TestProxyTLS(t *testing.T) {
 	assert.Equal(t, srv.ReqCnt(), 1)
 
 	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.Alive() })
+	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
 }
 
 func TestProxyUplinkTLS(t *testing.T) {

@@ -72,17 +72,13 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) Start() {
-	if proxy.state != ProxyStopped {
+	if proxy.State() != ProxyStopped {
 		return
 	}
 	go proxy.Run()
-	for proxy.state != ProxyRunning {
+	for proxy.State() != ProxyRunning {
 		time.Sleep(50 * time.Millisecond)
 	}
-}
-
-func (proxy *Proxy) Alive() bool {
-	return proxy.state.IsAlive()
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
@@ -95,6 +91,14 @@ func (proxy *Proxy) AdminAddr() net.Addr {
 
 func (proxy *Proxy) RequiresClientAuth() bool {
 	return proxy.config.Listen.Pass != ""
+}
+
+func (proxy *Proxy) State() ProxyState {
+	return proxy.state
+}
+
+func (proxy *Proxy) SetState(st ProxyState) {
+	proxy.state = st
 }
 
 func (proxy *Proxy) ReloadConfig() {
@@ -141,7 +145,7 @@ func (proxy *Proxy) ReloadAndWait() {
 
 func (proxy *Proxy) Stop() {
 	proxy.channels.command <- CmdStop
-	for proxy.state != ProxyStopped {
+	for proxy.State() != ProxyStopped {
 		time.Sleep(50 * time.Millisecond)
 	}
 }

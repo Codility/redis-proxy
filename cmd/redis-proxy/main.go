@@ -16,5 +16,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	panic(proxy.Run())
+	proxy.Run()
 }
