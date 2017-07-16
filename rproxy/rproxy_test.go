@@ -1,9 +1,6 @@
 package rproxy
 
 import (
-	"testing"
-	"time"
-
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"

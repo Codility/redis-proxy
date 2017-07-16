@@ -11,10 +11,7 @@ func (proxy *Proxy) Run() {
 		return
 	}
 	log.Println("Listening on", proxy.ListenAddr())
-
 	proxy.publishAdminInterface()
-	go proxy.watchSignals()
-
 	proxy.SetState(ProxyRunning)
 
 	channelMap := map[ProxyState]*ProxyChannels{

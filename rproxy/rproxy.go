@@ -3,9 +3,6 @@ package rproxy
 import (
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Codility/redis-proxy/resp"
@@ -158,17 +155,6 @@ func (proxy *Proxy) GetInfo() *ProxyInfo {
 	ch := make(chan *ProxyInfo)
 	proxy.channels.info <- ch
 	return <-ch
-}
-
-func (proxy *Proxy) watchSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP)
-
-	for {
-		s := <-c
-		log.Printf("Got signal: %v, reloading config\n", s)
-		proxy.Reload()
-	}
 }
 
 func (proxy *Proxy) verifyNewConfig(newConfig *Config) error {
