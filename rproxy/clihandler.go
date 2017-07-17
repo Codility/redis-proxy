@@ -41,7 +41,7 @@ func (ch *CliHandler) Run() {
 			continue
 		}
 
-		res, err := ch.proxy.controller.CallUplink(func() (*resp.Msg, error) {
+		res, err := ch.proxy.CallUplink(func() (*resp.Msg, error) {
 			config := ch.proxy.config
 			currUplinkConf := &config.Uplink
 			if (ch.uplinkConf == nil) || *ch.uplinkConf != *currUplinkConf {

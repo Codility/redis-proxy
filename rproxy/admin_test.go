@@ -25,7 +25,7 @@ func TestProxyAdminNonTLS(t *testing.T) {
 		},
 	}
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	res, err := http.Get(fmt.Sprintf("http://%s/", proxy.AdminAddr().String()))
 	assert.Nil(t, err)
@@ -49,7 +49,7 @@ func TestProxyAdminTLS(t *testing.T) {
 		},
 	}
 	proxy := mustStartTestProxy(t, conf)
-	defer proxy.controller.Stop()
+	defer proxy.Stop()
 
 	certPEM, err := ioutil.ReadFile("../test_data/tls/testca/cacert.pem")
 	assert.Nil(t, err)
