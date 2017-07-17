@@ -51,6 +51,7 @@ Create config file based on config_example.json, start `redis-proxy -f
 Current state
 -------------
 
+ - TODO: stop admin UI when stopping proxy
  - TODO: allow changing `log_messages` and `read_time_limit_ms` on
    config reload (or at least reject those changes)
  - TODO: strict `Config.ValidateSwitchTo`: whitelist instead of blacklisting.

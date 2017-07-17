@@ -31,17 +31,17 @@ func (ch *TestConfigHolder) ReloadConfig() {
 // TestRequest
 
 type TestRequest struct {
-	contr *Controller
+	proxy *Proxy
 	done  bool
 	block func()
 }
 
-func NewTestRequest(contr *Controller, block func()) *TestRequest {
-	return &TestRequest{contr: contr, block: block}
+func NewTestRequest(proxy *Proxy, block func()) *TestRequest {
+	return &TestRequest{proxy: proxy, block: block}
 }
 
 func (r *TestRequest) Do() {
-	r.contr.CallUplink(func() (*resp.Msg, error) {
+	r.proxy.CallUplink(func() (*resp.Msg, error) {
 		r.block()
 		return nil, nil
 	})
@@ -55,7 +55,7 @@ func mustStartTestProxy(t *testing.T, conf *TestConfigLoader) *Proxy {
 	proxy, err := NewProxy(conf)
 	assert.Nil(t, err)
 	proxy.Start()
-	assert.True(t, proxy.Alive())
+	assert.True(t, proxy.State().IsAlive())
 	return proxy
 }
 
