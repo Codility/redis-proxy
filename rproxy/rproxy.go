@@ -3,12 +3,18 @@ package rproxy
 import (
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Codility/redis-proxy/resp"
+)
+
+const (
+	// MaxConnections: not enforced, used only to ensure enough
+	// space in request/release channels to make it easy to
+	// measure current state.
+	//
+	// TODO: enforce?
+	MaxConnections = 1000
 )
 
 type ConfigHolder interface {
@@ -19,9 +25,22 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader          ConfigLoader
 	config                *Config
-	controller            *Controller
 	listenAddr, adminAddr *net.Addr
+
+	channels       ProxyChannels
+	activeRequests int
+	state          ProxyState
 }
+
+type ProxyChannels struct {
+	requestPermission chan chan struct{}
+	releasePermission chan struct{}
+	info              chan chan *ProxyInfo
+	command           chan ProxyCommand
+}
+
+////////////////////////////////////////
+// Interface
 
 func NewProxy(cl ConfigLoader) (*Proxy, error) {
 	config, err := cl.Load()
@@ -37,60 +56,26 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 	}
 
 	proxy := &Proxy{
+		channels: ProxyChannels{
+			requestPermission: make(chan chan struct{}, MaxConnections),
+			releasePermission: make(chan struct{}, MaxConnections),
+			info:              make(chan chan *ProxyInfo),
+			command:           make(chan ProxyCommand),
+		},
 		configLoader: cl,
 		config:       config,
-		controller:   NewController()}
+	}
 	return proxy, nil
 }
 
-func (proxy *Proxy) RunAndReport(doneChan chan struct{}) error {
-	ln, tcpLn, addr, err := proxy.config.Listen.Listen()
-	if err != nil {
-		return err
-	}
-	defer ln.Close()
-
-	proxy.listenAddr = addr
-	log.Println("Listening on", proxy.ListenAddr())
-
-	proxy.controller.Start(proxy) // TODO: clean this up when getting rid of circular dep
-	proxy.publishAdminInterface()
-
-	go proxy.watchSignals()
-
-	if doneChan != nil {
-		doneChan <- struct{}{}
-	}
-
-	for proxy.controller.Alive() {
-		tcpLn.SetDeadline(time.Now().Add(time.Second))
-		conn, err := ln.Accept()
-		if err != nil {
-			if resp.IsNetTimeout(err) {
-				continue
-			}
-			log.Fatalf("Admin interface: %s", err)
-			return err
-		} else {
-			ch := NewCliHandler(resp.NewConn(conn, 0, proxy.config.LogMessages), proxy)
-			go ch.Run()
-		}
-	}
-	return nil
-}
-
-func (proxy *Proxy) Run() error {
-	return proxy.RunAndReport(nil)
-}
-
 func (proxy *Proxy) Start() {
-	doneChan := make(chan struct{})
-	go proxy.RunAndReport(doneChan)
-	<-doneChan
-}
-
-func (proxy *Proxy) Alive() bool {
-	return proxy.controller.Alive()
+	if proxy.State() != ProxyStopped {
+		return
+	}
+	go proxy.Run()
+	for proxy.State() != ProxyRunning {
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
@@ -105,10 +90,18 @@ func (proxy *Proxy) RequiresClientAuth() bool {
 	return proxy.config.Listen.Pass != ""
 }
 
+func (proxy *Proxy) State() ProxyState {
+	return proxy.state
+}
+
+func (proxy *Proxy) SetState(st ProxyState) {
+	proxy.state = st
+}
+
 func (proxy *Proxy) ReloadConfig() {
 	newConfig, err := proxy.configLoader.Load()
 	if err != nil {
-		log.Printf("Got an error while loading %s: %s.  Keeping old config.", proxy, err)
+		log.Printf("Got an error while loading %v: %s.  Keeping old config.", proxy, err)
 		return
 	}
 
@@ -119,19 +112,49 @@ func (proxy *Proxy) ReloadConfig() {
 	proxy.config = newConfig
 }
 
+func (proxy *Proxy) Pause() {
+	proxy.channels.command <- CmdPause
+}
+
+func (proxy *Proxy) PauseAndWait() {
+	// TODO: push the state change instead of having the client
+	// poll
+	proxy.channels.command <- CmdPause
+	for proxy.GetInfo().ActiveRequests > 0 {
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func (proxy *Proxy) Unpause() {
+	proxy.channels.command <- CmdUnpause
+}
+
+func (proxy *Proxy) Reload() {
+	proxy.channels.command <- CmdReload
+}
+
+func (proxy *Proxy) ReloadAndWait() {
+	proxy.Reload()
+	for proxy.GetInfo().State != ProxyRunning {
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func (proxy *Proxy) Stop() {
+	proxy.channels.command <- CmdStop
+	for proxy.State() != ProxyStopped {
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
 func (proxy *Proxy) GetConfig() *Config {
 	return proxy.config
 }
 
-func (proxy *Proxy) watchSignals() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP)
-
-	for {
-		s := <-c
-		log.Printf("Got signal: %v, reloading config\n", s)
-		proxy.controller.Reload()
-	}
+func (proxy *Proxy) GetInfo() *ProxyInfo {
+	ch := make(chan *ProxyInfo)
+	proxy.channels.info <- ch
+	return <-ch
 }
 
 func (proxy *Proxy) verifyNewConfig(newConfig *Config) error {
@@ -141,4 +164,21 @@ func (proxy *Proxy) verifyNewConfig(newConfig *Config) error {
 	}
 
 	return proxy.config.ValidateSwitchTo(newConfig)
+}
+
+func (proxy *Proxy) CallUplink(block func() (*resp.Msg, error)) (*resp.Msg, error) {
+	proxy.enterExecution()
+	defer proxy.leaveExecution()
+
+	return block()
+}
+
+func (proxy *Proxy) enterExecution() {
+	ch := make(chan struct{})
+	proxy.channels.requestPermission <- ch
+	<-ch
+}
+
+func (proxy *Proxy) leaveExecution() {
+	proxy.channels.releasePermission <- struct{}{}
 }

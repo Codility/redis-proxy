@@ -12,10 +12,6 @@ redis-proxy: rproxy/*.go cmd/redis-proxy/*.go
 clean:
 	rm -rf $(BINARIES) .gopath
 
-#.PHONY: test
-#test:
-#	./scripts/go test
-
 .PHONY: config
 config: config.json
 
@@ -28,10 +24,15 @@ run: redis-proxy config.json
 	./redis-proxy config.json
 
 .PHONY: test
-test: goimports
+test: goimports govet
 	./scripts/go test -v github.com/Codility/redis-proxy/fakeredis/
 	./scripts/go test -v github.com/Codility/redis-proxy/resp/
 	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
+
+.PHONY: govet
+govet:
+	find . -name '*.go' -and -not -path './vendor/*' -and -not -path './.gopath/*' | \
+		while read f; do echo `dirname "$$f"`; done | uniq | xargs ./scripts/go tool vet
 
 .PHONY: goimports
 goimports:
