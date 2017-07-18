@@ -103,18 +103,19 @@ func (proxy *Proxy) SetState(st ProxyState) {
 	proxy.state = st
 }
 
-func (proxy *Proxy) ReloadConfig() {
+func (proxy *Proxy) ReloadConfig() error {
 	newConfig, err := proxy.configLoader.Load()
 	if err != nil {
 		log.Printf("Got an error while loading %v: %s.  Keeping old config.", proxy, err)
-		return
+		return err
 	}
 
 	if err := proxy.verifyNewConfig(newConfig); err != nil {
 		log.Printf("Can not reload into new config: %s.  Keeping old config.", err)
-		return
+		return err
 	}
 	proxy.config = newConfig
+	return nil
 }
 
 func (proxy *Proxy) Pause() error {

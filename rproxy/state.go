@@ -8,7 +8,6 @@ const (
 	ProxyRunning
 	ProxyPausing
 	ProxyPaused
-	ProxyReloading
 	ProxyStopping
 )
 

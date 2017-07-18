@@ -337,7 +337,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
 		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
-	proxy.Reload()
+	assert.Nil(t, proxy.Reload())
 	c.MustCall(resp.MsgFromStrings("SET", "k", "v"))
 
 	assert.Equal(t, srv_1.ReqCnt(), 2)
@@ -463,26 +463,4 @@ func TestProxyPauseDuringActiveRequests(t *testing.T) {
 	waitUntil(t, func() bool { return proxy.GetInfo().ActiveRequests == 1 })
 	assert.Equal(t, proxy.GetInfo().WaitingRequests, 0)
 	waitUntil(t, func() bool { return reqStartedDuringPauseWorking })
-}
-
-func TestProxyReloadWaitsForPause(t *testing.T) {
-	srv, proxy := startFakeredisAndProxy(t)
-	defer srv.Stop()
-	defer proxy.Stop()
-
-	finish := make(chan struct{})
-	executing := 0
-
-	go NewTestRequest(proxy, func() { executing += 1; <-finish; executing -= 1 }).Do()
-	waitUntil(t, func() bool { return executing == 1 })
-
-	proxy.Reload()
-	assert.Equal(t, proxy.GetInfo().State, ProxyReloading)
-	// assert.Equal(t, ch.ReloadConfigCallCnt, 0)
-
-	finish <- struct{}{}
-
-	waitUntil(t, func() bool { return executing == 0 })
-	assert.Equal(t, proxy.GetInfo().State, ProxyRunning)
-	//	assert.Equal(t, ch.ReloadConfigCallCnt, 1)
 }
