@@ -97,9 +97,9 @@ Command overview:
 * pause: suspend all client connections, return when complete
 * unpause: resume client connections, return immediately
 * reload: reload configuration, return when complete
-* verify: verify whether the proxy can seamlessly switch to current configuration files
 
 TODO: potential commands
+* verify: verify whether the proxy can seamlessly switch to current configuration files
 * pause-async: suspend all client connections, return immediately
 * reload-async: reload configuration, return when complete
 
