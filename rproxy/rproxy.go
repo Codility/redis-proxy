@@ -23,9 +23,10 @@ type ConfigHolder interface {
 }
 
 type Proxy struct {
-	configLoader          ConfigLoader
-	config                *Config
-	listenAddr, adminAddr *net.Addr
+	configLoader ConfigLoader
+	config       *Config
+	listenAddr   *net.Addr
+	adminUI      *AdminUI
 
 	channels       ProxyChannels
 	activeRequests int
@@ -83,7 +84,7 @@ func (proxy *Proxy) ListenAddr() net.Addr {
 }
 
 func (proxy *Proxy) AdminAddr() net.Addr {
-	return *proxy.adminAddr
+	return *proxy.adminUI.Addr
 }
 
 func (proxy *Proxy) RequiresClientAuth() bool {

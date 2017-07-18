@@ -125,17 +125,24 @@ func (as *AddrSpec) Listen() (net.Listener, *net.TCPListener, *net.Addr, error) 
 	if !as.TLS {
 		return ln, ln.(*net.TCPListener), &addr, nil
 	}
+	tlsLn := tls.NewListener(ln, as.GetTLSConfig())
+	return tlsLn, ln.(*net.TCPListener), &addr, nil
+}
 
+func (as *AddrSpec) GetTLSConfig() *tls.Config {
+	if !as.TLS {
+		return nil
+	}
 	cer, err := tls.LoadX509KeyPair(as.CertFile, as.KeyFile)
 	if err != nil {
 		log.Fatalf("Could not load key pair (%s, %s): %s",
 			as.CertFile, as.KeyFile, err)
-		return nil, nil, nil, err
+		return nil
 	}
-	tlsLn := tls.NewListener(ln, &tls.Config{
+
+	return &tls.Config{
 		Certificates: []tls.Certificate{cer},
-	})
-	return tlsLn, ln.(*net.TCPListener), &addr, nil
+	}
 }
 
 func (as *AddrSpec) Prepare(name string, server bool) ErrorList {

@@ -11,7 +11,10 @@ func (proxy *Proxy) Run() {
 		return
 	}
 	log.Println("Listening on", proxy.ListenAddr())
-	proxy.publishAdminInterface()
+
+	proxy.adminUI = NewAdminUI(proxy)
+	proxy.adminUI.Start()
+
 	proxy.SetState(ProxyRunning)
 
 	channelMap := map[ProxyState]*ProxyChannels{
@@ -55,6 +58,9 @@ func (proxy *Proxy) Run() {
 		}
 		proxy.handleChannels(channelMap[st])
 	}
+
+	proxy.adminUI.Stop()
+	proxy.adminUI = nil
 
 	proxy.SetState(ProxyStopped)
 }

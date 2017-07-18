@@ -5,40 +5,70 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 )
 
-func (proxy *Proxy) publishAdminInterface() {
+type AdminUI struct {
+	Addr *net.Addr
+
+	proxy  *Proxy
+	server *http.Server
+}
+
+func NewAdminUI(proxy *Proxy) *AdminUI {
+	return &AdminUI{proxy: proxy}
+}
+
+func (a *AdminUI) Start() error {
+	config := a.proxy.GetConfig()
+
+	ln, _, addr, err := config.Admin.Listen()
+	if err != nil {
+		return err
+	}
+	a.Addr = addr
+
+	proto := "http"
+	if config.Admin.TLS {
+		proto = "https"
+	}
+	log.Printf("Admin URL: %s://%s/\n", proto, config.Admin.Addr)
+
+	a.server = &http.Server{
+		Addr:      config.Admin.Addr,
+		TLSConfig: config.Admin.GetTLSConfig(),
+		Handler:   a.buildMux(),
+	}
+
+	go func() {
+		err := a.server.Serve(ln)
+		if err != http.ErrServerClosed {
+			log.Fatal("server.Serve returned error: ", err)
+		}
+	}()
+
+	return nil
+}
+
+func (a *AdminUI) Stop() {
+	a.server.Close()
+}
+
+func (a *AdminUI) buildMux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/cmd/", proxy.handleHTTPCmd)
+	mux.HandleFunc("/cmd/", a.handleHTTPCmd)
 	mux.HandleFunc("/status.json", func(w http.ResponseWriter, r *http.Request) {
-		proxy.handleHTTPStatus(w, r, "json")
+		a.handleHTTPStatus(w, r, "json")
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		proxy.handleHTTPStatus(w, r, "html")
+		a.handleHTTPStatus(w, r, "html")
 	})
-
-	config := proxy.config
-
-	ln, _, addr, err := config.Admin.Listen()
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-	proxy.adminAddr = addr
-	proto := "http"
-	if config.Admin.TLS {
-		proto = "https"
-	}
-	log.Printf("Admin URL: %s://%s/\n", proto, *addr)
-
-	go func() {
-		log.Fatal(http.Serve(ln, mux))
-	}()
+	return mux
 }
 
 var statusTemplate *template.Template
@@ -63,8 +93,8 @@ const statusHtml = `<!DOCTYPE html>
 </html>
 `
 
-func (proxy *Proxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
-	st := proxy.GetInfo()
+func (a *AdminUI) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
+	st := a.proxy.GetInfo()
 	info := map[string]interface{}{
 		"activeRequests": st.ActiveRequests,
 		"config":         st.Config,
@@ -83,20 +113,20 @@ func (proxy *Proxy) handleHTTPStatus(w http.ResponseWriter, r *http.Request, for
 	}
 }
 
-func (proxy *Proxy) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
+func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		r.ParseForm()
 		cmd := r.Form["cmd"][0]
 		log.Println("Received cmd:", cmd)
 		switch cmd {
 		case "pause":
-			proxy.Pause()
+			a.proxy.Pause()
 		case "pause-and-wait":
-			proxy.PauseAndWait()
+			a.proxy.PauseAndWait()
 		case "unpause":
-			proxy.Unpause()
+			a.proxy.Unpause()
 		case "reload":
-			proxy.Reload()
+			a.proxy.Reload()
 		default:
 			http.Error(w, fmt.Sprintf("Unknown cmd: '%s'", cmd), http.StatusBadRequest)
 			return
