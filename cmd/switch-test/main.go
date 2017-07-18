@@ -59,8 +59,8 @@ func main() {
 		time.Sleep(time.Second)
 		redis_b.SlaveOf(redis_a)
 
-		proxy_a.PauseAndWait()
-		proxy_b.PauseAndWait()
+		proxy_a.Pause()
+		proxy_b.Pause()
 		logStatus()
 		// TODO: wait for replication to catch up
 		time.Sleep(time.Second)
@@ -81,8 +81,8 @@ func main() {
 		time.Sleep(time.Second)
 		redis_a.SlaveOf(redis_b)
 
-		proxy_a.PauseAndWait()
-		proxy_b.PauseAndWait()
+		proxy_a.Pause()
+		proxy_b.Pause()
 		// TODO: wait for replication to catch up
 		time.Sleep(time.Second)
 

@@ -120,9 +120,9 @@ func (p *Proxy) Reload() {
 	}
 }
 
-func (p *Proxy) PauseAndWait() {
+func (p *Proxy) Pause() {
 	u := fmt.Sprintf("http://localhost:%d/cmd/", p.adminPort)
-	resp, err := http.PostForm(u, url.Values{"cmd": {"pause-and-wait"}})
+	resp, err := http.PostForm(u, url.Values{"cmd": {"pause"}})
 	if err != nil {
 		panic(err)
 	}
