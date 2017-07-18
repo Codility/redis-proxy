@@ -37,7 +37,7 @@ type ProxyChannels struct {
 	requestPermission chan chan struct{}
 	releasePermission chan struct{}
 	info              chan chan *ProxyInfo
-	command           chan commandPack
+	command           chan commandCall
 }
 
 ////////////////////////////////////////
@@ -61,7 +61,7 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 			requestPermission: make(chan chan struct{}, MaxConnections),
 			releasePermission: make(chan struct{}, MaxConnections),
 			info:              make(chan chan *ProxyInfo),
-			command:           make(chan commandPack),
+			command:           make(chan commandCall),
 		},
 		configLoader: cl,
 		config:       config,
@@ -137,9 +137,9 @@ func (proxy *Proxy) GetConfig() *Config {
 	return proxy.config
 }
 
-func (proxy *Proxy) command(cmd ProxyCommand) commandResponse {
+func (proxy *Proxy) command(cmd command) commandResponse {
 	rc := make(chan commandResponse, 1)
-	proxy.channels.command <- commandPack{cmd, rc}
+	proxy.channels.command <- commandCall{cmd, rc}
 	return <-rc
 }
 

@@ -108,18 +108,15 @@ To execute any command, POST to `<admin.addr>/cmd/` with
 
 All commands return HTTP status code 200 if successful, but in case of
 `-async` commands it means only that the request was sent sucessfully,
-or one of 4xx or 5xx HTTP codes otherwise.  The response body contains
-JSON with the following structure:
+or one of 4xx or 5xx HTTP codes otherwise.  The response body empty
+JSON:
 
-    {
-        "error-id": nil
-    }
+    {}
 
 if successful, OR:
 
     {
-        "error-id": "<error-id>"
+        "error": "<error>"
     }
 
-* TODO: list all error-ids in the API or in this doc.
-* TODO: add a human-readable `error-description`?
+otherwise.

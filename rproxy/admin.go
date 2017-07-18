@@ -112,24 +112,53 @@ func (a *AdminUI) handleHTTPStatus(w http.ResponseWriter, r *http.Request, forma
 	}
 }
 
-func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		r.ParseForm()
-		cmd := r.Form["cmd"][0]
-		log.Println("Received cmd:", cmd)
-		switch cmd {
-		case "pause":
-			a.proxy.Pause()
-		case "unpause":
-			a.proxy.Unpause()
-		case "reload":
-			a.proxy.Reload()
-		default:
-			http.Error(w, fmt.Sprintf("Unknown cmd: '%s'", cmd), http.StatusBadRequest)
-			return
+type JsonHttpResponse struct {
+	Err string `json:"error,omitempty"`
+}
+
+func respond(w http.ResponseWriter, status int, errStr string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(JsonHttpResponse{errStr})
+}
+
+func call(w http.ResponseWriter, block func() error) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Printf("Caught an internal error while handling API call: %s", err)
+			respond(w, http.StatusInternalServerError, "Internal error; try again later")
 		}
+	}()
+
+	err := block()
+	if err != nil {
+		// TODO: limit what errors we show to users?
+		respond(w, http.StatusBadRequest, err.Error())
+	} else {
+		respond(w, http.StatusOK, "")
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	r.ParseForm()
+	cmd := r.Form["cmd"][0]
+	log.Println("Received cmd:", cmd)
+	switch cmd {
+	case "pause":
+		call(w, a.proxy.Pause)
+	case "unpause":
+		call(w, a.proxy.Unpause)
+	case "reload":
+		call(w, a.proxy.Reload)
+	default:
+		respond(w, http.StatusBadRequest, fmt.Sprintf("Unknown cmd: '%s'", cmd))
+	}
 }
 
 func init() {
