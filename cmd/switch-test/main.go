@@ -69,8 +69,10 @@ func main() {
 		redis_a.Stop()
 
 		proxy_b.LinkTo(RedisBPort)
+		proxy_b.Unpause()
 		time.Sleep(time.Second)
 		proxy_a.LinkTo(ProxyBPort)
+		proxy_a.Unpause()
 
 		log.Print("Done switching to Redis B")
 
@@ -90,8 +92,10 @@ func main() {
 		redis_b.Stop()
 
 		proxy_a.LinkTo(RedisAPort)
+		proxy_a.Unpause()
 		time.Sleep(time.Second)
 		proxy_b.LinkTo(ProxyAPort)
+		proxy_b.Unpause()
 
 		log.Print("Done switching to Redis A")
 	}
