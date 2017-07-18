@@ -37,7 +37,7 @@ type ProxyChannels struct {
 	requestPermission chan chan struct{}
 	releasePermission chan struct{}
 	info              chan chan *ProxyInfo
-	command           chan ProxyCommand
+	command           chan commandPack
 }
 
 ////////////////////////////////////////
@@ -61,7 +61,7 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 			requestPermission: make(chan chan struct{}, MaxConnections),
 			releasePermission: make(chan struct{}, MaxConnections),
 			info:              make(chan chan *ProxyInfo),
-			command:           make(chan ProxyCommand),
+			command:           make(chan commandPack),
 		},
 		configLoader: cl,
 		config:       config,
@@ -70,13 +70,17 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) Start() {
+	log.Print("Start starts")
 	if proxy.State() != ProxyStopped {
 		return
 	}
+	log.Print("Start mids")
 	go proxy.Run()
+	log.Print("Start waits")
 	for proxy.State() != ProxyRunning {
 		time.Sleep(50 * time.Millisecond)
 	}
+	log.Print("Start ends")
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
@@ -113,43 +117,30 @@ func (proxy *Proxy) ReloadConfig() {
 	proxy.config = newConfig
 }
 
-func (proxy *Proxy) Pause() {
-	proxy.channels.command <- CmdPause
+func (proxy *Proxy) Pause() error {
+	return proxy.command(CmdPause).err
 }
 
-func (proxy *Proxy) PauseAndWait() {
-	// TODO: push the state change instead of having the client
-	// poll
-	proxy.channels.command <- CmdPause
-	for proxy.GetInfo().ActiveRequests > 0 {
-		time.Sleep(50 * time.Millisecond)
-	}
+func (proxy *Proxy) Unpause() error {
+	return proxy.command(CmdUnpause).err
 }
 
-func (proxy *Proxy) Unpause() {
-	proxy.channels.command <- CmdUnpause
+func (proxy *Proxy) Reload() error {
+	return proxy.command(CmdReload).err
 }
 
-func (proxy *Proxy) Reload() {
-	proxy.channels.command <- CmdReload
-}
-
-func (proxy *Proxy) ReloadAndWait() {
-	proxy.Reload()
-	for proxy.GetInfo().State != ProxyRunning {
-		time.Sleep(50 * time.Millisecond)
-	}
-}
-
-func (proxy *Proxy) Stop() {
-	proxy.channels.command <- CmdStop
-	for proxy.State() != ProxyStopped {
-		time.Sleep(50 * time.Millisecond)
-	}
+func (proxy *Proxy) Stop() error {
+	return proxy.command(CmdStop).err
 }
 
 func (proxy *Proxy) GetConfig() *Config {
 	return proxy.config
+}
+
+func (proxy *Proxy) command(cmd ProxyCommand) commandResponse {
+	rc := make(chan commandResponse, 1)
+	proxy.channels.command <- commandPack{cmd, rc}
+	return <-rc
 }
 
 func (proxy *Proxy) GetInfo() *ProxyInfo {

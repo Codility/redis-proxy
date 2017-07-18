@@ -1,6 +1,9 @@
 package rproxy
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 func (proxy *Proxy) Run() {
 	proxy.SetState(ProxyStarting)
@@ -80,18 +83,24 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 			State:           proxy.State(),
 			Config:          proxy.GetConfig()}
 
-	case cmd := <-channels.command:
-		switch cmd {
+	case cmdPack := <-channels.command:
+		switch cmdPack.cmd {
 		case CmdPause:
 			proxy.SetState(ProxyPausing)
+			cmdPack.Return(nil)
 		case CmdUnpause:
 			proxy.SetState(ProxyRunning)
+			cmdPack.Return(nil)
 		case CmdReload:
 			proxy.SetState(ProxyReloading)
+			cmdPack.Return(nil)
 		case CmdStop:
 			proxy.SetState(ProxyStopping)
+			cmdPack.Return(nil)
 		default:
-			log.Print("Unknown proxy command:", cmd)
+			err := fmt.Errorf("Unknown proxy command: %v", cmdPack.cmd)
+			log.Print(err)
+			cmdPack.Return(err)
 		}
 	}
 }

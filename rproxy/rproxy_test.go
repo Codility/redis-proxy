@@ -168,7 +168,7 @@ func TestProxySwitch(t *testing.T) {
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 
-	proxy.ReloadAndWait()
+	proxy.Reload()
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-1\r\n")
 }
@@ -206,7 +206,7 @@ func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 
-	proxy.ReloadAndWait()
+	proxy.Reload()
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
 }
@@ -337,7 +337,7 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
 		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
-	proxy.ReloadAndWait()
+	proxy.Reload()
 	c.MustCall(resp.MsgFromStrings("SET", "k", "v"))
 
 	assert.Equal(t, srv_1.ReqCnt(), 2)
@@ -387,7 +387,7 @@ func TestProxyPause(t *testing.T) {
 
 	// in ProxyPaused: requests are queued
 	r1 := NewTestRequest(proxy, func() {})
-	proxy.PauseAndWait() // --------------- pause starts
+	proxy.Pause() // --------------- pause starts
 	go r1.Do()
 	waitUntil(t, func() bool { return proxy.GetInfo().WaitingRequests == 1 })
 
