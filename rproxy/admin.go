@@ -113,13 +113,17 @@ func (a *AdminUI) handleHTTPStatus(w http.ResponseWriter, r *http.Request, forma
 }
 
 type JsonHttpResponse struct {
-	Err string `json:"error,omitempty"`
+	Ok    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
 }
 
 func respond(w http.ResponseWriter, status int, errStr string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(JsonHttpResponse{errStr})
+	json.NewEncoder(w).Encode(JsonHttpResponse{
+		Ok:    status == http.StatusOK,
+		Error: errStr,
+	})
 }
 
 func call(w http.ResponseWriter, block func() error) {

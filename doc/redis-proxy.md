@@ -114,11 +114,12 @@ All commands return HTTP status code 200 if successful, but in case of
 or one of 4xx or 5xx HTTP codes otherwise.  The response body empty
 JSON:
 
-    {}
+    {"ok": true}
 
 if successful, OR:
 
     {
+        "ok": false,
         "error": "<error>"
     }
 
