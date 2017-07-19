@@ -1,6 +1,7 @@
 package rproxy
 
 import (
+	"log"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -56,6 +57,7 @@ func mustStartTestProxy(t *testing.T, conf *TestConfigLoader) *Proxy {
 	assert.Nil(t, err)
 	proxy.Start()
 	assert.True(t, proxy.State().IsAlive())
+	log.Print("mustStartTestProxy ends")
 	return proxy
 }
 

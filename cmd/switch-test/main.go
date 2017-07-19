@@ -59,8 +59,8 @@ func main() {
 		time.Sleep(time.Second)
 		redis_b.SlaveOf(redis_a)
 
-		proxy_a.PauseAndWait()
-		proxy_b.PauseAndWait()
+		proxy_a.Pause()
+		proxy_b.Pause()
 		logStatus()
 		// TODO: wait for replication to catch up
 		time.Sleep(time.Second)
@@ -69,8 +69,10 @@ func main() {
 		redis_a.Stop()
 
 		proxy_b.LinkTo(RedisBPort)
+		proxy_b.Unpause()
 		time.Sleep(time.Second)
 		proxy_a.LinkTo(ProxyBPort)
+		proxy_a.Unpause()
 
 		log.Print("Done switching to Redis B")
 
@@ -81,8 +83,8 @@ func main() {
 		time.Sleep(time.Second)
 		redis_a.SlaveOf(redis_b)
 
-		proxy_a.PauseAndWait()
-		proxy_b.PauseAndWait()
+		proxy_a.Pause()
+		proxy_b.Pause()
 		// TODO: wait for replication to catch up
 		time.Sleep(time.Second)
 
@@ -90,8 +92,10 @@ func main() {
 		redis_b.Stop()
 
 		proxy_a.LinkTo(RedisAPort)
+		proxy_a.Unpause()
 		time.Sleep(time.Second)
 		proxy_b.LinkTo(ProxyAPort)
+		proxy_b.Unpause()
 
 		log.Print("Done switching to Redis A")
 	}

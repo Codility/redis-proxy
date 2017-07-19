@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os/exec"
 	"strconv"
-	"syscall"
 )
 
 type Proxy struct {
@@ -112,17 +111,20 @@ func (p *Proxy) LinkTo(newUplink int) {
 }
 
 func (p *Proxy) Reload() {
-	if p.cmd == nil {
-		panic("Proxy not running")
-	}
-	if err := p.cmd.Process.Signal(syscall.SIGHUP); err != nil {
-		panic(err)
-	}
+	p.callApi("reload")
 }
 
-func (p *Proxy) PauseAndWait() {
+func (p *Proxy) Pause() {
+	p.callApi("pause")
+}
+
+func (p *Proxy) Unpause() {
+	p.callApi("unpause")
+}
+
+func (p *Proxy) callApi(command string) {
 	u := fmt.Sprintf("http://localhost:%d/cmd/", p.adminPort)
-	resp, err := http.PostForm(u, url.Values{"cmd": {"pause-and-wait"}})
+	resp, err := http.PostForm(u, url.Values{"cmd": {command}})
 	if err != nil {
 		panic(err)
 	}

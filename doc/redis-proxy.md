@@ -92,14 +92,35 @@ HTTP[s] API
 
 Open `admin.addr` to see proxy status.
 
-Proxy exposes these operations via the interface:
+Command overview:
 
-    # pause (returns immediately)
-    curl http://<admin.addr>/cmd/ -d cmd=pause
-    # pause-and-wait (returns after all connections are suspended)
-    curl http://<admin.addr>/cmd/ -d cmd=pause-and-wait
-    # unpause
-    curl http://<admin.addr>/cmd/ -d cmd=unpause
-    # reload config (acts like pause + reload + unpause)
-    curl http://<admin.addr>/cmd/ -d cmd=reload
+* pause: suspend all client connections, return when complete
+* unpause: resume client connections, return immediately
+* reload: reload configuration, return when complete
 
+TODO: potential commands
+* verify: verify whether the proxy can seamlessly switch to current configuration files
+* pause-async: suspend all client connections, return immediately
+* reload-async: reload configuration, return when complete
+
+
+To execute any command, POST to `<admin.addr>/cmd/` with
+`cmd=<command>`.  For example:
+
+    curl http://127.0.0.1:7011/cmd/ -d cmd=pause
+
+All commands return HTTP status code 200 if successful, but in case of
+`-async` commands it means only that the request was sent sucessfully,
+or one of 4xx or 5xx HTTP codes otherwise.  The response body empty
+JSON:
+
+    {"ok": true}
+
+if successful, OR:
+
+    {
+        "ok": false,
+        "error": "<error>"
+    }
+
+otherwise.

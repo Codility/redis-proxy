@@ -1,10 +1,23 @@
 package rproxy
 
-type ProxyCommand int
+type command int
 
 const (
-	CmdPause = ProxyCommand(iota)
+	CmdPause = command(iota)
 	CmdUnpause
 	CmdReload
 	CmdStop
 )
+
+type commandCall struct {
+	cmd         command
+	respChannel chan commandResponse
+}
+
+type commandResponse struct {
+	err error
+}
+
+func (c *commandCall) Return(err error) {
+	c.respChannel <- commandResponse{err}
+}

@@ -1,6 +1,9 @@
 package rproxy
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
 func (proxy *Proxy) Run() {
 	proxy.SetState(ProxyStarting)
@@ -11,17 +14,15 @@ func (proxy *Proxy) Run() {
 		return
 	}
 	log.Println("Listening on", proxy.ListenAddr())
-	proxy.publishAdminInterface()
+
+	proxy.adminUI = NewAdminUI(proxy)
+	proxy.adminUI.Start()
+
 	proxy.SetState(ProxyRunning)
 
 	channelMap := map[ProxyState]*ProxyChannels{
 		ProxyRunning: &proxy.channels,
 		ProxyPausing: &ProxyChannels{
-			requestPermission: nil,
-			releasePermission: proxy.channels.releasePermission,
-			info:              proxy.channels.info,
-			command:           nil},
-		ProxyReloading: &ProxyChannels{
 			requestPermission: nil,
 			releasePermission: proxy.channels.releasePermission,
 			info:              proxy.channels.info,
@@ -44,17 +45,14 @@ func (proxy *Proxy) Run() {
 				proxy.SetState(ProxyPaused)
 				continue
 			}
-		case ProxyReloading:
-			if proxy.activeRequests == 0 {
-				proxy.ReloadConfig()
-				proxy.SetState(ProxyRunning)
-				continue
-			}
 		case ProxyRunning:
 		case ProxyPaused:
 		}
 		proxy.handleChannels(channelMap[st])
 	}
+
+	proxy.adminUI.Stop()
+	proxy.adminUI = nil
 
 	proxy.SetState(ProxyStopped)
 }
@@ -74,18 +72,23 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 			State:           proxy.State(),
 			Config:          proxy.GetConfig()}
 
-	case cmd := <-channels.command:
-		switch cmd {
+	case cmdPack := <-channels.command:
+		switch cmdPack.cmd {
 		case CmdPause:
 			proxy.SetState(ProxyPausing)
+			cmdPack.Return(nil)
 		case CmdUnpause:
 			proxy.SetState(ProxyRunning)
+			cmdPack.Return(nil)
 		case CmdReload:
-			proxy.SetState(ProxyReloading)
+			cmdPack.Return(proxy.ReloadConfig())
 		case CmdStop:
 			proxy.SetState(ProxyStopping)
+			cmdPack.Return(nil)
 		default:
-			log.Print("Unknown proxy command:", cmd)
+			err := fmt.Errorf("Unknown proxy command: %v", cmdPack.cmd)
+			log.Print(err)
+			cmdPack.Return(err)
 		}
 	}
 }
