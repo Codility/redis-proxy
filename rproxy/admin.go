@@ -7,6 +7,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type AdminUI struct {
@@ -68,6 +70,7 @@ func (a *AdminUI) buildMux() *http.ServeMux {
 		}
 		a.handleHTTPStatus(w, r, "html")
 	})
+	mux.Handle("/metrics/", promhttp.Handler())
 	return mux
 }
 
@@ -83,6 +86,7 @@ const statusHtml = `<!DOCTYPE html>
 {{.}}
 		</pre>
 		<div>As JSON: <a href="status.json">here</a></div>
+		<div>Metrics: <a href="/metrics/">prometheus endpoint</a></div>
 		<form action="/cmd/" method="POST">
 			<button type="submit" name="cmd" value="pause">pause</button>
 			<button type="submit" name="cmd" value="unpause">unpause</button>

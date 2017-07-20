@@ -2,6 +2,7 @@ package rproxy
 
 import (
 	"log"
+	"time"
 
 	"github.com/Codility/redis-proxy/resp"
 )
@@ -36,45 +37,7 @@ func (ch *CliHandler) Run() {
 		if req == nil {
 			continue
 		}
-
-		if !ch.preprocessRequest(req) {
-			continue
-		}
-
-		res, err := ch.proxy.CallUplink(func() (*resp.Msg, error) {
-			config := ch.proxy.config
-			currUplinkConf := &config.Uplink
-			if (ch.uplinkConf == nil) || *ch.uplinkConf != *currUplinkConf {
-				ch.uplinkConf = currUplinkConf
-				if err := ch.dialUplink(config); err != nil {
-					return nil, err
-				}
-
-				if ch.uplinkConf.Pass != "" {
-					if err := ch.uplinkConn.Authenticate(ch.uplinkConf.Pass); err != nil {
-						return nil, err
-					}
-				}
-
-				if ch.db != 0 {
-					if err := ch.uplinkConn.Select(ch.db); err != nil {
-						return nil, err
-					}
-				}
-			}
-
-			_, err := ch.uplinkConn.WriteMsg(req)
-			if err != nil {
-				return nil, err
-			}
-			return ch.uplinkConn.ReadMsg()
-		})
-		if err != nil {
-			log.Printf("Error: %v\n", err)
-			return
-		}
-		ch.postprocessRequest(req, res)
-		ch.writeToClient(res.Data())
+		ch.handleRequest(req)
 	}
 }
 
@@ -152,4 +115,68 @@ func (ch *CliHandler) postprocessRequest(req, res *resp.Msg) {
 	if (req.Op() == resp.MsgOpSelect) && res.IsOk() {
 		ch.db = req.FirstArgInt()
 	}
+}
+
+func callAndMeasure(callable func() error) (time.Duration, error) {
+	startTs := time.Now()
+	err := callable()
+	return time.Since(startTs), err
+}
+
+func (ch *CliHandler) handleRequest(req *resp.Msg) {
+	startTs := time.Now()
+	redisCallDuration := time.Duration(0)
+	defer func() {
+		statRecordRequest(time.Since(startTs), redisCallDuration)
+	}()
+
+	if !ch.preprocessRequest(req) {
+		return
+	}
+
+	res, err := ch.proxy.CallUplink(func() (*resp.Msg, error) {
+		config := ch.proxy.config
+		currUplinkConf := &config.Uplink
+		if (ch.uplinkConf == nil) || *ch.uplinkConf != *currUplinkConf {
+			ch.uplinkConf = currUplinkConf
+
+			duration, err := callAndMeasure(func() error { return ch.dialUplink(config) })
+			redisCallDuration += duration
+			if err != nil {
+				return nil, err
+			}
+
+			if ch.uplinkConf.Pass != "" {
+				duration, err := callAndMeasure(func() error { return ch.uplinkConn.Authenticate(ch.uplinkConf.Pass) })
+				redisCallDuration += duration
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			if ch.db != 0 {
+				duration, err := callAndMeasure(func() error { return ch.uplinkConn.Select(ch.db) })
+				redisCallDuration += duration
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		redisReqTs := time.Now()
+		_, err := ch.uplinkConn.WriteMsg(req)
+		if err != nil {
+			redisCallDuration += time.Since(redisReqTs)
+			return nil, err
+		}
+		resp, err := ch.uplinkConn.ReadMsg()
+		redisCallDuration += time.Since(redisReqTs)
+		return resp, err
+	})
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		return
+	}
+	ch.postprocessRequest(req, res)
+	ch.writeToClient(res.Data())
 }

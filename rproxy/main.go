@@ -35,6 +35,7 @@ func (proxy *Proxy) Run() {
 	}
 
 	for {
+		statRecordProxyState(proxy.activeRequests)
 		st := proxy.State()
 		if st == ProxyStopping {
 			break
