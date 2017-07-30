@@ -26,7 +26,7 @@ func (proxy *Proxy) Run() {
 			requestPermission: nil,
 			releasePermission: proxy.channels.releasePermission,
 			info:              proxy.channels.info,
-			command:           nil},
+			command:           proxy.channels.command},
 		ProxyPaused: &ProxyChannels{
 			requestPermission: nil,
 			releasePermission: nil,
