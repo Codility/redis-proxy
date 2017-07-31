@@ -419,6 +419,27 @@ func TestProxyAllowsParallelRequests(t *testing.T) {
 	waitUntil(t, func() bool { return executing == 0 })
 }
 
+func TestProxyAllowsCancellingPause(t *testing.T) {
+	srv, proxy := startFakeredisAndProxy(t)
+	defer srv.Stop()
+	defer proxy.Stop()
+
+	finish := make(chan struct{})
+	r := NewTestRequest(proxy, func() { <-finish })
+	go r.Do()
+
+	waitUntil(t, func() bool { return r.started })
+
+	proxy.Pause()
+	assert.Equal(t, proxy.GetInfo().State, ProxyPausing)
+
+	proxy.Unpause()
+	assert.Equal(t, proxy.GetInfo().State, ProxyRunning)
+
+	finish <- struct{}{}
+	waitUntil(t, func() bool { return r.done })
+}
+
 func TestProxyPauseDuringActiveRequests(t *testing.T) {
 	srv, proxy := startFakeredisAndProxy(t)
 	defer srv.Stop()
