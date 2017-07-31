@@ -32,9 +32,10 @@ func (ch *TestConfigHolder) ReloadConfig() {
 // TestRequest
 
 type TestRequest struct {
-	proxy *Proxy
-	done  bool
-	block func()
+	proxy   *Proxy
+	started bool
+	done    bool
+	block   func()
 }
 
 func NewTestRequest(proxy *Proxy, block func()) *TestRequest {
@@ -43,6 +44,7 @@ func NewTestRequest(proxy *Proxy, block func()) *TestRequest {
 
 func (r *TestRequest) Do() {
 	r.proxy.CallUplink(func() (*resp.Msg, error) {
+		r.started = true
 		r.block()
 		return nil, nil
 	})
