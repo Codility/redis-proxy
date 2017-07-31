@@ -94,15 +94,9 @@ Open `admin.addr` to see proxy status.
 
 Command overview:
 
-* pause: suspend all client connections, return when complete
+* pause: suspend all client connections, return immediately
 * unpause: resume client connections, return immediately
 * reload: reload configuration, return when complete
-
-TODO: potential commands
-* verify: verify whether the proxy can seamlessly switch to current configuration files
-* pause-async: suspend all client connections, return immediately
-* reload-async: reload configuration, return when complete
-
 
 To execute any command, POST to `<admin.addr>/cmd/` with
 `cmd=<command>`.  For example:
