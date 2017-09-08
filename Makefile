@@ -29,6 +29,17 @@ test: goimports govet
 	./scripts/go test -v github.com/Codility/redis-proxy/resp/
 	./scripts/go test -v github.com/Codility/redis-proxy/rproxy/
 
+.PHONY: test-cover
+test-cover: goimports govet
+	./scripts/go test -covermode=count -coverprofile=cover-in-fakeredis.out -v github.com/Codility/redis-proxy/fakeredis/
+	./scripts/go test -covermode=count -coverprofile=cover-in-resp.out -v github.com/Codility/redis-proxy/resp/
+	./scripts/go test -covermode=count -coverprofile=cover-in-rproxy.out -v github.com/Codility/redis-proxy/rproxy/
+
+	echo "mode: count" > cover-sum.out
+	for f in cover-in-*.out; do tail -n +2 "$$f" >> cover-sum.out; done
+
+	./scripts/go tool cover -func=cover-sum.out
+
 .PHONY: govet
 govet:
 	find . -name '*.go' -and -not -path './vendor/*' -and -not -path './.gopath/*' | \
