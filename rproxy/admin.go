@@ -25,7 +25,7 @@ func NewAdminUI(proxy *Proxy) *AdminUI {
 func (a *AdminUI) Start() error {
 	config := a.proxy.GetConfig()
 
-	ln, _, addr, err := config.Admin.Listen()
+	ln, addr, err := config.Admin.Listen()
 	if err != nil {
 		return err
 	}

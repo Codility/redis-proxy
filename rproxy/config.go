@@ -99,34 +99,24 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 	})
 }
 
-// Returns:
-// - top-level generic net.Listener
-// - the underlying net.TCPListener (different from the first listener in case of TLS)
-// - effective address
-// - error, if any
-//
-// The reason for explicitely returning net.TCPListener is that the
-// proxy needs it to set deadlines on accept operations, but the
-// listener from tls package does not support them, and does not
-// provide any way to get to the underlying TCPListener.
-func (as *AddrSpec) Listen() (net.Listener, *net.TCPListener, *net.Addr, error) {
+func (as *AddrSpec) Listen() (*Listener, *net.Addr, error) {
 	if !(as.Network == "" || as.Network == "tcp") {
 		err := errors.New("Only TCP network supported for listening")
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	ln, err := net.Listen("tcp", as.Addr)
 	if err != nil {
 		log.Fatalf("Could not listen: %s", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	addr := ln.(*net.TCPListener).Addr()
 
 	if !as.TLS {
-		return ln, ln.(*net.TCPListener), &addr, nil
+		return &Listener{ln, ln.(*net.TCPListener)}, &addr, nil
 	}
 	tlsLn := tls.NewListener(ln, as.GetTLSConfig())
-	return tlsLn, ln.(*net.TCPListener), &addr, nil
+	return &Listener{tlsLn, ln.(*net.TCPListener)}, &addr, nil
 }
 
 func (as *AddrSpec) GetTLSConfig() *tls.Config {
