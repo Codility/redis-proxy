@@ -32,6 +32,14 @@ func TestAnalysis(t *testing.T) {
 	mSelectBroken := msg("*2\r\n$6\r\nSELECT\r\n$1\r\nX\r\n")
 	assert.Equal(t, mSelectBroken.Op(), MsgOpBroken)
 	assert.Equal(t, mSelectBroken.FirstArg(), "")
+
+	mSync := msg("*1\r\n$4\r\nSYNC\r\n")
+	assert.Equal(t, mSync.Op(), MsgOpSync)
+	assert.Equal(t, mSync.FirstArg(), "")
+
+	mPsync := msg("*3\r\n$5\r\nPSYNC\r\n$0\r\n\r\n$0\r\n\r\n")
+	assert.Equal(t, mPsync.Op(), MsgOpPsync)
+	assert.Equal(t, mPsync.FirstArg(), "")
 }
 
 func TestHelpers(t *testing.T) {

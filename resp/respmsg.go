@@ -13,6 +13,8 @@ const (
 	MsgOpUnchecked = MessageOp(iota)
 	MsgOpAuth
 	MsgOpSelect
+	MsgOpSync
+	MsgOpPsync
 	MsgOpBroken
 	MsgOpOther
 )
@@ -21,6 +23,8 @@ var msgOps = [...]string{
 	"unchecked",
 	"auth",
 	"select",
+	"sync",
+	"psync",
 	"-broken-",
 	"-other-",
 }
@@ -35,6 +39,8 @@ var msgPrefixMap = []struct {
 }{
 	{[]byte("*2\r\n$4\r\nAUTH\r\n$"), MsgOpAuth},
 	{[]byte("*2\r\n$6\r\nSELECT\r\n$"), MsgOpSelect},
+	{[]byte("*1\r\n$4\r\nSYNC\r\n"), MsgOpSync},
+	{[]byte("*3\r\n$5\r\nPSYNC\r\n$"), MsgOpPsync},
 }
 
 var (
@@ -113,12 +119,16 @@ func (m *Msg) analyse() {
 
 			suff := m.data[len(def.prefix):]
 			end := bytes.IndexByte(suff, '\r')
-			if end == -1 {
-				m.op = MsgOpBroken
+			if end == -1 { // no args
+				// should this command have args?
+				if !bytes.HasPrefix(m.data, []byte("*1\r")) {
+					// yes, it should
+					m.op = MsgOpBroken
+				}
 				return
 			}
 			n, err := strconv.Atoi(string(suff[:end]))
-			if err != nil {
+			if err != nil { // length of first arg is not an int
 				m.op = MsgOpBroken
 				return
 			}
