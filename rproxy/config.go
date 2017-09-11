@@ -99,24 +99,23 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 	})
 }
 
-func (as *AddrSpec) Listen() (*Listener, *net.Addr, error) {
+func (as *AddrSpec) Listen() (*Listener, error) {
 	if !(as.Network == "" || as.Network == "tcp") {
 		err := errors.New("Only TCP network supported for listening")
-		return nil, nil, err
+		return nil, err
 	}
 
 	ln, err := net.Listen("tcp", as.Addr)
 	if err != nil {
 		log.Fatalf("Could not listen: %s", err)
-		return nil, nil, err
+		return nil, err
 	}
-	addr := ln.(*net.TCPListener).Addr()
 
 	if !as.TLS {
-		return &Listener{ln, ln.(*net.TCPListener)}, &addr, nil
+		return &Listener{ln, ln.(*net.TCPListener)}, nil
 	}
 	tlsLn := tls.NewListener(ln, as.GetTLSConfig())
-	return &Listener{tlsLn, ln.(*net.TCPListener)}, &addr, nil
+	return &Listener{tlsLn, ln.(*net.TCPListener)}, nil
 }
 
 func (as *AddrSpec) GetTLSConfig() *tls.Config {

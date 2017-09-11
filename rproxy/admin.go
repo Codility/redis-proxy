@@ -12,7 +12,7 @@ import (
 )
 
 type AdminUI struct {
-	Addr *net.Addr
+	Addr net.Addr
 
 	proxy  *Proxy
 	server *http.Server
@@ -25,11 +25,11 @@ func NewAdminUI(proxy *Proxy) *AdminUI {
 func (a *AdminUI) Start() error {
 	config := a.proxy.GetConfig()
 
-	ln, addr, err := config.Admin.Listen()
+	ln, err := config.Admin.Listen()
 	if err != nil {
 		return err
 	}
-	a.Addr = addr
+	a.Addr = ln.Addr()
 
 	proto := "http"
 	if config.Admin.TLS {

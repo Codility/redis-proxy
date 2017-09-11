@@ -20,3 +20,7 @@ type Listener struct {
 func (l *Listener) SetDeadline(t time.Time) error {
 	return l.TCPListener.SetDeadline(t)
 }
+
+func (l *Listener) Addr() net.Addr {
+	return l.TCPListener.Addr()
+}
