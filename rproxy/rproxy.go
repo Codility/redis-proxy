@@ -25,7 +25,7 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader ConfigLoader
 	config       *Config
-	listenAddr   *net.Addr
+	listenAddr   net.Addr
 	adminUI      *AdminUI
 
 	channels       ProxyChannels
@@ -84,11 +84,11 @@ func (proxy *Proxy) Start() {
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
-	return *proxy.listenAddr
+	return proxy.listenAddr
 }
 
 func (proxy *Proxy) AdminAddr() net.Addr {
-	return *proxy.adminUI.Addr
+	return proxy.adminUI.Addr
 }
 
 func (proxy *Proxy) RequiresClientAuth() bool {
@@ -174,4 +174,32 @@ func (proxy *Proxy) enterExecution() {
 
 func (proxy *Proxy) leaveExecution() {
 	proxy.channels.releasePermission <- struct{}{}
+}
+
+func (proxy *Proxy) startListening() error {
+	ln, err := proxy.config.Listen.Listen()
+	if err != nil {
+		return err
+	}
+	proxy.listenAddr = ln.Addr()
+	go proxy.listenForClients(ln)
+	return nil
+}
+
+func (proxy *Proxy) listenForClients(ln *Listener) {
+	defer ln.Close()
+
+	for proxy.State().IsStartingOrAlive() {
+		ln.SetDeadline(time.Now().Add(time.Second))
+		conn, err := ln.Accept()
+		if err != nil {
+			if resp.IsNetTimeout(err) {
+				continue
+			}
+			log.Printf("Got an error accepting a connection: %s", err)
+		} else {
+			rc := resp.NewConn(conn, 0, proxy.config.LogMessages)
+			go NewCliHandler(rc, proxy).Run()
+		}
+	}
 }
