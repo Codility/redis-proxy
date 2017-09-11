@@ -25,7 +25,7 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader ConfigLoader
 	config       *Config
-	listenAddr   *net.Addr
+	listenAddr   net.Addr
 	adminUI      *AdminUI
 
 	channels       ProxyChannels
@@ -84,11 +84,11 @@ func (proxy *Proxy) Start() {
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
-	return *proxy.listenAddr
+	return proxy.listenAddr
 }
 
 func (proxy *Proxy) AdminAddr() net.Addr {
-	return *proxy.adminUI.Addr
+	return proxy.adminUI.Addr
 }
 
 func (proxy *Proxy) RequiresClientAuth() bool {
@@ -177,11 +177,11 @@ func (proxy *Proxy) leaveExecution() {
 }
 
 func (proxy *Proxy) startListening() error {
-	ln, addr, err := proxy.config.Listen.Listen()
+	ln, err := proxy.config.Listen.Listen()
 	if err != nil {
 		return err
 	}
-	proxy.listenAddr = addr
+	proxy.listenAddr = ln.Addr()
 	go proxy.listenForClients(ln)
 	return nil
 }
