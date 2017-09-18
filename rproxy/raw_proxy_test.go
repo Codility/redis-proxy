@@ -32,11 +32,20 @@ func TestRawProxy(t *testing.T) {
 	assert.Equal(t, srv.ReqCnt(), 1)
 	assert.Equal(t, proxy.GetInfo().RawConnections, 1)
 
+	c.Close()
+	deadline := time.Now().Add(time.Second)
+	for proxy.GetInfo().RawConnections > 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("Expected RawConnections to zero")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
 	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
 }
 
-func TestRawProxy_TerminateBeforeConnectionFullyStarts(t *testing.T) {
+func TestRawProxy_Terminate(t *testing.T) {
 	srv := fakeredis.Start("fake", "tcp")
 	defer srv.Stop()
 

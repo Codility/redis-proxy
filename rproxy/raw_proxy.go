@@ -13,6 +13,7 @@ type RawProxy struct {
 	proxy            *Proxy
 	terminateAllChan chan chan struct{}
 	getInfoChan      chan chan *RawProxyInfo
+	deadHandlerChan  chan *RawHandler
 }
 
 type RawProxyInfo struct {
@@ -30,6 +31,7 @@ func NewRawProxy(proxy *Proxy) *RawProxy {
 		proxy:            proxy,
 		terminateAllChan: make(chan chan struct{}),
 		getInfoChan:      make(chan chan *RawProxyInfo),
+		deadHandlerChan:  make(chan *RawHandler),
 	}
 }
 
@@ -80,14 +82,15 @@ loop:
 				continue loop
 			}
 			h := NewRawHandler(conn, r.proxy)
-			handlers[conn.RemoteAddr()] = h
+			handlers[h.CliAddr()] = h
 			go h.Run()
 		case ret := <-r.terminateAllChan:
 			for _, h := range handlers {
 				h.Terminate()
 			}
-			handlers = map[net.Addr]*RawHandler{}
 			ret <- struct{}{}
+		case dead := <-r.deadHandlerChan:
+			delete(handlers, dead.CliAddr())
 		case ret := <-r.getInfoChan:
 			ret <- &RawProxyInfo{HandlerCnt: len(handlers)}
 		}

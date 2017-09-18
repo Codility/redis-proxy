@@ -34,6 +34,7 @@ func (r *RawHandler) Run() {
 	defer func() {
 		r.cliConn.Close()
 		r.uplinkConn.Close()
+		r.proxy.rawProxy.deadHandlerChan <- r
 	}()
 
 	r.uplinkConn = r.DialUplink()
@@ -65,4 +66,8 @@ func (r *RawHandler) Run() {
 
 func (r *RawHandler) Terminate() {
 	r.terminateChan <- struct{}{}
+}
+
+func (r *RawHandler) CliAddr() net.Addr {
+	return r.cliConn.RemoteAddr()
 }
