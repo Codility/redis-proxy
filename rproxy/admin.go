@@ -83,7 +83,8 @@ const statusHtml = `<!DOCTYPE html>
 	</head>
 	<body>
 		<pre>
-{{.}}
+State: {{.stateStr}}
+{{.info}}
 		</pre>
 		<div>As JSON: <a href="status.json">here</a></div>
 		<div>Metrics: <a href="/metrics/">prometheus endpoint</a></div>
@@ -99,19 +100,17 @@ const statusHtml = `<!DOCTYPE html>
 
 func (a *AdminUI) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
 	st := a.proxy.GetInfo()
-	info := map[string]interface{}{
-		"activeRequests": st.ActiveRequests,
-		"config":         st.Config,
-		"stateStr":       st.State.String(),
-	}
-	infoBytes, _ := json.MarshalIndent(info, "", "    ")
+	infoBytes, _ := json.MarshalIndent(st, "", "    ")
 
 	if format == "json" {
 		w.Write(infoBytes)
 		return
 	}
 
-	err := statusTemplate.Execute(w, string(infoBytes))
+	err := statusTemplate.Execute(w, map[string]interface{}{
+		"stateStr": st.State.String(),
+		"info":     string(infoBytes),
+	})
 	if err != nil {
 		panic(err)
 	}
