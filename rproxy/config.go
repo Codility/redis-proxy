@@ -211,6 +211,12 @@ func (c *Config) Prepare() ErrorList {
 	errList.Append(c.Listen.Prepare("listen", true))
 	errList.Append(c.Uplink.Prepare("uplink", false))
 
+	if c.ListenRaw.Addr != "" {
+		if c.ListenRaw.Pass != "" {
+			errList.Add("listen_raw does not support in-proxy authentication")
+		}
+	}
+
 	return errList
 }
 
