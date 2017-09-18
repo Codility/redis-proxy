@@ -156,7 +156,6 @@ func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	cmd := r.Form["cmd"][0]
-	log.Println("Received cmd:", cmd)
 	switch cmd {
 	case "pause":
 		call(w, a.proxy.Pause)

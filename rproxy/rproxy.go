@@ -70,17 +70,13 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) Start() {
-	log.Print("Start starts")
 	if proxy.State() != ProxyStopped {
 		return
 	}
-	log.Print("Start mids")
 	go proxy.Run()
-	log.Print("Start waits")
 	for proxy.State() != ProxyRunning {
 		time.Sleep(50 * time.Millisecond)
 	}
-	log.Print("Start ends")
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
