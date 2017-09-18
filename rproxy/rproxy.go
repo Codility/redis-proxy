@@ -84,6 +84,10 @@ func (proxy *Proxy) ListenAddr() net.Addr {
 	return proxy.listenAddr
 }
 
+func (proxy *Proxy) ListenUnmanagedAddr() net.Addr {
+	return proxy.rawProxy.Addr
+}
+
 func (proxy *Proxy) AdminAddr() net.Addr {
 	return proxy.adminUI.Addr
 }
