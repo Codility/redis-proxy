@@ -27,6 +27,7 @@ type Proxy struct {
 	config       *Config
 	listenAddr   net.Addr
 	adminUI      *AdminUI
+	rawProxy     *RawProxy
 
 	channels       ProxyChannels
 	activeRequests int
@@ -192,7 +193,7 @@ func (proxy *Proxy) listenForClients(ln *Listener) {
 			if resp.IsNetTimeout(err) {
 				continue
 			}
-			log.Printf("Got an error accepting a connection: %s", err)
+			log.Printf("Managed Proxy: Got an error accepting a connection: %s", err)
 		} else {
 			rc := resp.NewConn(conn, 0, proxy.config.LogMessages)
 			go NewCliHandler(rc, proxy).Run()

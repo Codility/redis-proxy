@@ -194,6 +194,7 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 type Config struct {
 	Uplink          AddrSpec `json:"uplink"`
 	Listen          AddrSpec `json:"listen"`
+	ListenUnmanaged AddrSpec `json:"listen_unmanaged"`
 	Admin           AddrSpec `json:"admin"`
 	ReadTimeLimitMs int64    `json:"read_time_limit_ms"`
 	LogMessages     bool     `json:"log_messages"`

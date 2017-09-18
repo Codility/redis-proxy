@@ -15,6 +15,11 @@ func (proxy *Proxy) Run() {
 	}
 	log.Println("Listening on", proxy.ListenAddr())
 
+	if proxy.config.ListenUnmanaged.Addr != "" {
+		proxy.rawProxy = NewRawProxy(proxy)
+		proxy.rawProxy.Start()
+	}
+
 	proxy.adminUI = NewAdminUI(proxy)
 	proxy.adminUI.Start()
 
