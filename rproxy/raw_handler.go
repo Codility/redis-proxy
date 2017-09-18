@@ -7,12 +7,18 @@ import (
 )
 
 type RawHandler struct {
-	cliConn net.Conn
-	proxy   *Proxy
+	proxy               *Proxy
+	cliConn, uplinkConn net.Conn
+
+	terminateChan chan struct{}
 }
 
 func NewRawHandler(conn net.Conn, proxy *Proxy) *RawHandler {
-	return &RawHandler{cliConn: conn, proxy: proxy}
+	return &RawHandler{
+		cliConn:       conn,
+		proxy:         proxy,
+		terminateChan: make(chan struct{}),
+	}
 }
 
 func (r *RawHandler) DialUplink() net.Conn {
@@ -25,28 +31,38 @@ func (r *RawHandler) DialUplink() net.Conn {
 }
 
 func (r *RawHandler) Run() {
-	defer r.cliConn.Close()
-	uplinkConn := r.DialUplink()
-	defer uplinkConn.Close()
+	defer func() {
+		r.cliConn.Close()
+		r.uplinkConn.Close()
+	}()
 
-	log.Printf("Starting raw proxy for %s <-> %s", r.cliConn.RemoteAddr(), uplinkConn.RemoteAddr())
+	r.uplinkConn = r.DialUplink()
 	doneChan := make(chan struct{})
+	terminating := false
 
-	// incoming
-	go func() {
-		io.Copy(r.cliConn, uplinkConn)
+	pump := func(from, to net.Conn) {
+		_, err := io.Copy(from, to)
+		if !terminating && err != nil {
+			log.Print("Raw proxy error:", err)
+		}
 		doneChan <- struct{}{}
-	}()
+	}
 
-	// outgoing
-	go func() {
-		io.Copy(uplinkConn, r.cliConn)
-		doneChan <- struct{}{}
-	}()
+	log.Printf("Starting raw proxy for %s <-> %s", r.cliConn.RemoteAddr(), r.uplinkConn.RemoteAddr())
 
-	// Wait until one side gets closed.  Deferred calls above will
-	// close both connections, and that will terminate the other
-	// goroutine.
-	<-doneChan
-	log.Printf("Closing raw proxy for %s <-> %s", r.cliConn.RemoteAddr(), uplinkConn.RemoteAddr())
+	go pump(r.cliConn, r.uplinkConn)
+	go pump(r.uplinkConn, r.cliConn)
+
+	// Both clauses in select should have the same result: finish this goroutine
+	select {
+	case <-doneChan:
+	case <-r.terminateChan:
+	}
+	terminating = true
+
+	log.Printf("Closing raw proxy for %s <-> %s", r.cliConn.RemoteAddr(), r.uplinkConn.RemoteAddr())
+}
+
+func (r *RawHandler) Terminate() {
+	r.terminateChan <- struct{}{}
 }

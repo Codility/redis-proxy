@@ -141,7 +141,6 @@ func call(w http.ResponseWriter, block func() error) {
 
 	err := block()
 	if err != nil {
-		// TODO: limit what errors we show to users?
 		respond(w, http.StatusBadRequest, err.Error())
 	} else {
 		respond(w, http.StatusOK, "")

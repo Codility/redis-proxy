@@ -2,6 +2,7 @@ package rproxy
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Codility/redis-proxy/fakeredis"
 	"github.com/Codility/redis-proxy/resp"
@@ -31,4 +32,42 @@ func TestRawProxy(t *testing.T) {
 
 	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
+}
+
+func TestRawProxy_TerminateBeforeConnectionFullyStarts(t *testing.T) {
+	srv := fakeredis.Start("fake", "tcp")
+	defer srv.Stop()
+
+	proxy, err := NewProxy(&TestConfigLoader{
+		conf: &Config{
+			Uplink:          AddrSpec{Addr: srv.Addr().String()},
+			Listen:          AddrSpec{Addr: "127.0.0.1:0"},
+			ListenUnmanaged: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:           AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	})
+	assert.Nil(t, err)
+	proxy.Start()
+	assert.True(t, proxy.State().IsAlive())
+
+	c := resp.MustDial("tcp", proxy.ListenUnmanagedAddr().String(), 0, false)
+	assert.True(t, isConnOpen(c))
+
+	proxy.rawProxy.TerminateAll()
+
+	deadline := time.Now().Add(time.Second)
+	for isConnOpen(c) {
+		if time.Now().After(deadline) {
+			t.Fatal("Expected client to shut down")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	proxy.Stop()
+	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
+}
+
+func isConnOpen(conn *resp.Conn) bool {
+	_, err := conn.Call(resp.MsgFromStrings("ping"))
+	return err == nil
 }

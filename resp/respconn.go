@@ -79,6 +79,10 @@ func (rc *Conn) MustWriteMsg(msg *Msg) int {
 	return res
 }
 
+func (rc *Conn) Read(p []byte) (n int, err error) {
+	return rc.raw.Read(p)
+}
+
 func (rc *Conn) ReadMsg() (*Msg, error) {
 	if rc.readTimeLimitMs > 0 {
 		rc.raw.SetReadDeadline(time.Now().Add(time.Duration(rc.readTimeLimitMs) * time.Millisecond))
