@@ -25,7 +25,7 @@ func (r *RawProxy) Start() error {
 		return err
 	}
 	r.Addr = ln.Addr()
-	log.Println("Raw proxy started on", r.Addr)
+	log.Println("Raw proxy:", r.Addr)
 	go r.listenForClients(ln)
 	return nil
 }
@@ -40,7 +40,7 @@ func (r *RawProxy) listenForClients(ln *Listener) {
 			if resp.IsNetTimeout(err) {
 				continue
 			}
-			log.Printf("Unmanaged Proxy: Got an error accepting a connection: %s", err)
+			log.Printf("Raw Proxy: Got an error accepting a connection: %s", err)
 		} else {
 			go NewRawHandler(conn, r.proxy).Run()
 		}

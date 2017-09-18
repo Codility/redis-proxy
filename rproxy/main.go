@@ -13,7 +13,7 @@ func (proxy *Proxy) Run() {
 		proxy.SetState(ProxyStopped)
 		return
 	}
-	log.Println("Listening on", proxy.ListenAddr())
+	log.Println("Managed proxy:", proxy.ListenAddr())
 
 	if proxy.config.ListenUnmanaged.Addr != "" {
 		proxy.rawProxy = NewRawProxy(proxy)
