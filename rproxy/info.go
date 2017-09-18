@@ -5,4 +5,5 @@ type ProxyInfo struct {
 	WaitingRequests int
 	State           ProxyState
 	Config          *Config
+	RawConnections  int
 }

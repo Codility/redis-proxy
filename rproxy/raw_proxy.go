@@ -12,6 +12,11 @@ type RawProxy struct {
 	Addr             net.Addr
 	proxy            *Proxy
 	terminateAllChan chan chan struct{}
+	getInfoChan      chan chan *RawProxyInfo
+}
+
+type RawProxyInfo struct {
+	HandlerCnt int
 }
 
 type RawProxyCmd int
@@ -24,6 +29,7 @@ func NewRawProxy(proxy *Proxy) *RawProxy {
 	return &RawProxy{
 		proxy:            proxy,
 		terminateAllChan: make(chan chan struct{}),
+		getInfoChan:      make(chan chan *RawProxyInfo),
 	}
 }
 
@@ -80,7 +86,10 @@ loop:
 			for _, h := range handlers {
 				h.Terminate()
 			}
+			handlers = map[net.Addr]*RawHandler{}
 			ret <- struct{}{}
+		case ret := <-r.getInfoChan:
+			ret <- &RawProxyInfo{HandlerCnt: len(handlers)}
 		}
 	}
 }
@@ -89,4 +98,10 @@ func (r *RawProxy) TerminateAll() {
 	ret := make(chan struct{})
 	r.terminateAllChan <- ret
 	<-ret
+}
+
+func (r *RawProxy) GetInfo() *RawProxyInfo {
+	ret := make(chan *RawProxyInfo)
+	r.getInfoChan <- ret
+	return <-ret
 }

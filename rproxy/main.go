@@ -72,11 +72,17 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 		proxy.activeRequests--
 
 	case stateCh := <-channels.info:
+		rawConns := 0
+		if proxy.rawProxy != nil {
+			rawConns = proxy.rawProxy.GetInfo().HandlerCnt
+		}
 		stateCh <- &ProxyInfo{
 			ActiveRequests:  proxy.activeRequests,
 			WaitingRequests: len(proxy.channels.requestPermission),
 			State:           proxy.State(),
-			Config:          proxy.GetConfig()}
+			Config:          proxy.GetConfig(),
+			RawConnections:  rawConns,
+		}
 
 	case cmdPack := <-channels.command:
 		switch cmdPack.cmd {

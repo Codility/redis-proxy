@@ -24,11 +24,13 @@ func TestRawProxy(t *testing.T) {
 	assert.Nil(t, err)
 	proxy.Start()
 	assert.True(t, proxy.State().IsAlive())
+	assert.Equal(t, proxy.GetInfo().RawConnections, 0)
 
 	c := resp.MustDial("tcp", proxy.ListenUnmanagedAddr().String(), 0, false)
 	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
+	assert.Equal(t, proxy.GetInfo().RawConnections, 1)
 
 	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
@@ -52,6 +54,7 @@ func TestRawProxy_TerminateBeforeConnectionFullyStarts(t *testing.T) {
 
 	c := resp.MustDial("tcp", proxy.ListenUnmanagedAddr().String(), 0, false)
 	assert.True(t, isConnOpen(c))
+	assert.Equal(t, proxy.GetInfo().RawConnections, 1)
 
 	proxy.rawProxy.TerminateAll()
 
@@ -62,6 +65,7 @@ func TestRawProxy_TerminateBeforeConnectionFullyStarts(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+	assert.Equal(t, proxy.GetInfo().RawConnections, 0)
 
 	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
