@@ -15,10 +15,10 @@ func TestRawProxy(t *testing.T) {
 
 	proxy, err := NewProxy(&TestConfigLoader{
 		conf: &Config{
-			Uplink:          AddrSpec{Addr: srv.Addr().String()},
-			Listen:          AddrSpec{Addr: "127.0.0.1:0"},
-			ListenUnmanaged: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:           AddrSpec{Addr: "127.0.0.1:0"},
+			Uplink:    AddrSpec{Addr: srv.Addr().String()},
+			Listen:    AddrSpec{Addr: "127.0.0.1:0"},
+			ListenRaw: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:     AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	assert.Nil(t, err)
@@ -26,7 +26,7 @@ func TestRawProxy(t *testing.T) {
 	assert.True(t, proxy.State().IsAlive())
 	assert.Equal(t, proxy.GetInfo().RawConnections, 0)
 
-	c := resp.MustDial("tcp", proxy.ListenUnmanagedAddr().String(), 0, false)
+	c := resp.MustDial("tcp", proxy.ListenRawAddr().String(), 0, false)
 	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
@@ -42,17 +42,17 @@ func TestRawProxy_TerminateBeforeConnectionFullyStarts(t *testing.T) {
 
 	proxy, err := NewProxy(&TestConfigLoader{
 		conf: &Config{
-			Uplink:          AddrSpec{Addr: srv.Addr().String()},
-			Listen:          AddrSpec{Addr: "127.0.0.1:0"},
-			ListenUnmanaged: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:           AddrSpec{Addr: "127.0.0.1:0"},
+			Uplink:    AddrSpec{Addr: srv.Addr().String()},
+			Listen:    AddrSpec{Addr: "127.0.0.1:0"},
+			ListenRaw: AddrSpec{Addr: "127.0.0.1:0"},
+			Admin:     AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	assert.Nil(t, err)
 	proxy.Start()
 	assert.True(t, proxy.State().IsAlive())
 
-	c := resp.MustDial("tcp", proxy.ListenUnmanagedAddr().String(), 0, false)
+	c := resp.MustDial("tcp", proxy.ListenRawAddr().String(), 0, false)
 	assert.True(t, isConnOpen(c))
 	assert.Equal(t, proxy.GetInfo().RawConnections, 1)
 

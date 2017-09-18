@@ -36,7 +36,7 @@ func NewRawProxy(proxy *Proxy) *RawProxy {
 func (r *RawProxy) Start() error {
 	config := r.proxy.GetConfig()
 
-	ln, err := config.ListenUnmanaged.Listen()
+	ln, err := config.ListenRaw.Listen()
 	if err != nil {
 		return err
 	}

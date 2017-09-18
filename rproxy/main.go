@@ -15,7 +15,7 @@ func (proxy *Proxy) Run() {
 	}
 	log.Println("Managed proxy:", proxy.ListenAddr())
 
-	if proxy.config.ListenUnmanaged.Addr != "" {
+	if proxy.config.ListenRaw.Addr != "" {
 		proxy.rawProxy = NewRawProxy(proxy)
 		proxy.rawProxy.Start()
 	}
@@ -96,6 +96,9 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 			cmdPack.Return(proxy.ReloadConfig())
 		case CmdStop:
 			proxy.SetState(ProxyStopping)
+			cmdPack.Return(nil)
+		case CmdTerminateRawConnections:
+			proxy.rawProxy.TerminateAll()
 			cmdPack.Return(nil)
 		default:
 			err := fmt.Errorf("Unknown proxy command: %v", cmdPack.cmd)

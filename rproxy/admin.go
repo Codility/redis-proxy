@@ -91,6 +91,7 @@ const statusHtml = `<!DOCTYPE html>
 			<button type="submit" name="cmd" value="pause">pause</button>
 			<button type="submit" name="cmd" value="unpause">unpause</button>
 			<button type="submit" name="cmd" value="reload">reload [=pause+reload config+unpause]</button>
+			<button type="submit" name="cmd" value="terminate-raw-connections">terminate raw connections</button>
 		</form>
 	</body>
 </html>
@@ -162,6 +163,8 @@ func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 		call(w, a.proxy.Unpause)
 	case "reload":
 		call(w, a.proxy.Reload)
+	case "terminate-raw-connections":
+		call(w, a.proxy.TerminateRawConnections)
 	default:
 		respond(w, http.StatusBadRequest, fmt.Sprintf("Unknown cmd: '%s'", cmd))
 	}

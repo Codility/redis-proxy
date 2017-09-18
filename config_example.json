@@ -12,7 +12,7 @@
     "certfile": "cert.pem",
     "keyfile": "key.pem"
   },
-  "listen_unmanaged": {
+  "listen_raw": {
     "addr": "127.0.0.1:7011",
     "tls": true,
     "certfile": "cert.pem",

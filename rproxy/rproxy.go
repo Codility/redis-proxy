@@ -84,7 +84,7 @@ func (proxy *Proxy) ListenAddr() net.Addr {
 	return proxy.listenAddr
 }
 
-func (proxy *Proxy) ListenUnmanagedAddr() net.Addr {
+func (proxy *Proxy) ListenRawAddr() net.Addr {
 	return proxy.rawProxy.Addr
 }
 
@@ -133,6 +133,10 @@ func (proxy *Proxy) Reload() error {
 
 func (proxy *Proxy) Stop() error {
 	return proxy.command(CmdStop).err
+}
+
+func (proxy *Proxy) TerminateRawConnections() error {
+	return proxy.command(CmdTerminateRawConnections).err
 }
 
 func (proxy *Proxy) GetConfig() *Config {
