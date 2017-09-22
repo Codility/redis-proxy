@@ -13,7 +13,12 @@ func (proxy *Proxy) Run() {
 		proxy.SetState(ProxyStopped)
 		return
 	}
-	log.Println("Listening on", proxy.ListenAddr())
+	log.Println("Managed proxy:", proxy.ListenAddr())
+
+	if proxy.config.ListenRaw.Addr != "" {
+		proxy.rawProxy = NewRawProxy(proxy)
+		proxy.rawProxy.Start()
+	}
 
 	proxy.adminUI = NewAdminUI(proxy)
 	proxy.adminUI.Start()
@@ -67,11 +72,17 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 		proxy.activeRequests--
 
 	case stateCh := <-channels.info:
+		rawConns := 0
+		if proxy.rawProxy != nil {
+			rawConns = proxy.rawProxy.GetInfo().HandlerCnt
+		}
 		stateCh <- &ProxyInfo{
 			ActiveRequests:  proxy.activeRequests,
 			WaitingRequests: len(proxy.channels.requestPermission),
 			State:           proxy.State(),
-			Config:          proxy.GetConfig()}
+			Config:          proxy.GetConfig(),
+			RawConnections:  rawConns,
+		}
 
 	case cmdPack := <-channels.command:
 		switch cmdPack.cmd {
@@ -85,6 +96,9 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 			cmdPack.Return(proxy.ReloadConfig())
 		case CmdStop:
 			proxy.SetState(ProxyStopping)
+			cmdPack.Return(nil)
+		case CmdTerminateRawConnections:
+			proxy.rawProxy.TerminateAll()
 			cmdPack.Return(nil)
 		default:
 			err := fmt.Errorf("Unknown proxy command: %v", cmdPack.cmd)

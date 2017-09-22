@@ -7,6 +7,7 @@ const (
 	CmdUnpause
 	CmdReload
 	CmdStop
+	CmdTerminateRawConnections
 )
 
 type commandCall struct {

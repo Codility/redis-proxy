@@ -25,8 +25,9 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader ConfigLoader
 	config       *Config
-	listenAddr   *net.Addr
+	listenAddr   net.Addr
 	adminUI      *AdminUI
+	rawProxy     *RawProxy
 
 	channels       ProxyChannels
 	activeRequests int
@@ -70,25 +71,25 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) Start() {
-	log.Print("Start starts")
 	if proxy.State() != ProxyStopped {
 		return
 	}
-	log.Print("Start mids")
 	go proxy.Run()
-	log.Print("Start waits")
 	for proxy.State() != ProxyRunning {
 		time.Sleep(50 * time.Millisecond)
 	}
-	log.Print("Start ends")
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
-	return *proxy.listenAddr
+	return proxy.listenAddr
+}
+
+func (proxy *Proxy) ListenRawAddr() net.Addr {
+	return proxy.rawProxy.Addr
 }
 
 func (proxy *Proxy) AdminAddr() net.Addr {
-	return *proxy.adminUI.Addr
+	return proxy.adminUI.Addr
 }
 
 func (proxy *Proxy) RequiresClientAuth() bool {
@@ -134,6 +135,10 @@ func (proxy *Proxy) Stop() error {
 	return proxy.command(CmdStop).err
 }
 
+func (proxy *Proxy) TerminateRawConnections() error {
+	return proxy.command(CmdTerminateRawConnections).err
+}
+
 func (proxy *Proxy) GetConfig() *Config {
 	return proxy.config
 }
@@ -174,4 +179,32 @@ func (proxy *Proxy) enterExecution() {
 
 func (proxy *Proxy) leaveExecution() {
 	proxy.channels.releasePermission <- struct{}{}
+}
+
+func (proxy *Proxy) startListening() error {
+	ln, err := proxy.config.Listen.Listen()
+	if err != nil {
+		return err
+	}
+	proxy.listenAddr = ln.Addr()
+	go proxy.listenForClients(ln)
+	return nil
+}
+
+func (proxy *Proxy) listenForClients(ln *Listener) {
+	defer ln.Close()
+
+	for proxy.State().IsStartingOrAlive() {
+		ln.SetDeadline(time.Now().Add(time.Second))
+		conn, err := ln.Accept()
+		if err != nil {
+			if resp.IsNetTimeout(err) {
+				continue
+			}
+			log.Printf("Managed Proxy: Got an error accepting a connection: %s", err)
+		} else {
+			rc := resp.NewConn(conn, 0, proxy.config.LogMessages)
+			go NewCliHandler(rc, proxy).Run()
+		}
+	}
 }

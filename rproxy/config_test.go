@@ -1,6 +1,8 @@
 package rproxy
 
 import (
+	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -20,6 +22,21 @@ func TestConfigValidation(t *testing.T) {
 		if errList.Ok() {
 			t.Fatalf("Expected config to be invalid: %s",
 				c.AsJSON())
+		}
+
+		expected := map[string]bool{}
+		for _, e := range errors {
+			expected[e] = true
+		}
+		got := map[string]bool{}
+		for _, e := range errList.errors {
+			got[e] = true
+		}
+		if !reflect.DeepEqual(expected, got) {
+			expB, _ := json.MarshalIndent(expected, "", "  ")
+			gotB, _ := json.MarshalIndent(got, "", "  ")
+			t.Fatalf("Expected and received error lists are different:\n%v\n%v",
+				string(expB), string(gotB))
 		}
 	}
 
@@ -50,6 +67,12 @@ func TestConfigValidation(t *testing.T) {
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
 		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
+	assertValid(&Config{
+		Uplink:    AddrSpec{Addr: nonTLSAddr},
+		Listen:    AddrSpec{Addr: "127.0.0.1:0"},
+		ListenRaw: AddrSpec{Addr: "127.0.0.1:0"},
+		Admin:     AddrSpec{Addr: "127.0.0.1:0"},
+	})
 	assertInvalid(&Config{},
 		[]string{
 			"Missing admin address",
@@ -57,11 +80,13 @@ func TestConfigValidation(t *testing.T) {
 			"Missing uplink address",
 		})
 	assertInvalid(&Config{
-		Uplink: AddrSpec{Addr: "127.0.0.1:0"},
-		Listen: AddrSpec{Addr: "127.0.0.1:0"},
-		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		Uplink:    AddrSpec{Addr: "127.0.0.1:0"},
+		Listen:    AddrSpec{Addr: "127.0.0.1:0"},
+		ListenRaw: AddrSpec{Addr: "127.0.0.1:0", Pass: "somepass"},
+		Admin:     AddrSpec{Addr: "127.0.0.1:0"},
 	}, []string{
 		"could not connect to uplink: 127.0.0.1:0 (non-TLS)",
+		"listen_raw does not support in-proxy authentication",
 	})
 
 	// TLS configurations
@@ -98,9 +123,9 @@ func TestConfigValidation(t *testing.T) {
 		"could not connect to uplink: " + nonTLSAddr + " (TLS)",
 	})
 	assertInvalid(&Config{
-		Uplink: AddrSpec{Addr: "127.0.0.1:0"},
-		Listen: AddrSpec{Addr: "127.0.0.1:0"},
-		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		Uplink: AddrSpec{Addr: "127.0.0.1:0", TLS: true},
+		Listen: AddrSpec{Addr: "127.0.0.1:0", TLS: true},
+		Admin:  AddrSpec{Addr: "127.0.0.1:0", TLS: true},
 	}, []string{
 		"admin.tls requires certfile",
 		"admin.tls requires keyfile",
@@ -124,11 +149,11 @@ func TestConfigValidation(t *testing.T) {
 			KeyFile:  "no-such-keyfile",
 		},
 	}, []string{
-		"could not load admin.tls.certfile: no-such-certfile",
-		"could not load admin.tls.keyfile: no-such-keyfile",
-		"could not load listen.tls.certfile: no-such-certfile",
-		"could not load listen.tls.keyfile: no-such-keyfile",
-		"could not load uplink.tls.cacertfile: no-such-cacertfile",
+		"could not load admin.certfile: no-such-certfile",
+		"could not load admin.keyfile: no-such-keyfile",
+		"could not load listen.certfile: no-such-certfile",
+		"could not load listen.keyfile: no-such-keyfile",
+		"could not load uplink.cacertfile: no-such-cacertfile",
 	})
 }
 

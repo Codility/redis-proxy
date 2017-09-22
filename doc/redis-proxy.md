@@ -57,6 +57,12 @@ supported in actual configuration):
         "certfile": "cert.pem",     # <- TLS requires certfile and keyfile.
         "keyfile": "key.pem"
       },
+      "listen_raw": {               # <- Raw Proxy server.  Provides unmanaged,
+        "addr": "127.0.0.1:7010",   #    full-dupliex proxy to uplink.
+        "tls": true,
+        "certfile": "cert.pem",     # <- TLS requires certfile and keyfile.
+        "keyfile": "key.pem"
+      },
       "admin": {                    # <- Admin UI (http[s]).  This is where
         "addr": "127.0.0.1:7011",   #    you can see and control proxy state.
         "tls": true,
@@ -97,6 +103,7 @@ Command overview:
 * pause: suspend all client connections, return immediately
 * unpause: resume client connections, return immediately
 * reload: reload configuration, return when complete
+* terminate-raw-connections: terminate all connections made via listen_raw
 
 To execute any command, POST to `<admin.addr>/cmd/` with
 `cmd=<command>`.  For example:
