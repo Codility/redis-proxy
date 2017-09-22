@@ -27,6 +27,7 @@ type Proxy struct {
 	config       *Config
 	listenAddr   net.Addr
 	adminUI      *AdminUI
+	rawProxy     *RawProxy
 
 	channels       ProxyChannels
 	activeRequests int
@@ -70,21 +71,21 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 }
 
 func (proxy *Proxy) Start() {
-	log.Print("Start starts")
 	if proxy.State() != ProxyStopped {
 		return
 	}
-	log.Print("Start mids")
 	go proxy.Run()
-	log.Print("Start waits")
 	for proxy.State() != ProxyRunning {
 		time.Sleep(50 * time.Millisecond)
 	}
-	log.Print("Start ends")
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
 	return proxy.listenAddr
+}
+
+func (proxy *Proxy) ListenRawAddr() net.Addr {
+	return proxy.rawProxy.Addr
 }
 
 func (proxy *Proxy) AdminAddr() net.Addr {
@@ -132,6 +133,10 @@ func (proxy *Proxy) Reload() error {
 
 func (proxy *Proxy) Stop() error {
 	return proxy.command(CmdStop).err
+}
+
+func (proxy *Proxy) TerminateRawConnections() error {
+	return proxy.command(CmdTerminateRawConnections).err
 }
 
 func (proxy *Proxy) GetConfig() *Config {
@@ -196,7 +201,7 @@ func (proxy *Proxy) listenForClients(ln *Listener) {
 			if resp.IsNetTimeout(err) {
 				continue
 			}
-			log.Printf("Got an error accepting a connection: %s", err)
+			log.Printf("Managed Proxy: Got an error accepting a connection: %s", err)
 		} else {
 			rc := resp.NewConn(conn, 0, proxy.config.LogMessages)
 			go NewCliHandler(rc, proxy).Run()

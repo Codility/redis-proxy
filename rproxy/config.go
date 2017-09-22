@@ -194,6 +194,7 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 type Config struct {
 	Uplink          AddrSpec `json:"uplink"`
 	Listen          AddrSpec `json:"listen"`
+	ListenRaw       AddrSpec `json:"listen_raw"`
 	Admin           AddrSpec `json:"admin"`
 	ReadTimeLimitMs int64    `json:"read_time_limit_ms"`
 	LogMessages     bool     `json:"log_messages"`
@@ -209,6 +210,12 @@ func (c *Config) Prepare() ErrorList {
 	errList.Append(c.Admin.Prepare("admin", true))
 	errList.Append(c.Listen.Prepare("listen", true))
 	errList.Append(c.Uplink.Prepare("uplink", false))
+
+	if c.ListenRaw.Addr != "" {
+		if c.ListenRaw.Pass != "" {
+			errList.Add("listen_raw does not support in-proxy authentication")
+		}
+	}
 
 	return errList
 }

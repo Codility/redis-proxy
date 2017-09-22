@@ -83,7 +83,8 @@ const statusHtml = `<!DOCTYPE html>
 	</head>
 	<body>
 		<pre>
-{{.}}
+State: {{.stateStr}}
+{{.info}}
 		</pre>
 		<div>As JSON: <a href="status.json">here</a></div>
 		<div>Metrics: <a href="/metrics/">prometheus endpoint</a></div>
@@ -91,6 +92,7 @@ const statusHtml = `<!DOCTYPE html>
 			<button type="submit" name="cmd" value="pause">pause</button>
 			<button type="submit" name="cmd" value="unpause">unpause</button>
 			<button type="submit" name="cmd" value="reload">reload [=pause+reload config+unpause]</button>
+			<button type="submit" name="cmd" value="terminate-raw-connections">terminate raw connections</button>
 		</form>
 	</body>
 </html>
@@ -98,19 +100,17 @@ const statusHtml = `<!DOCTYPE html>
 
 func (a *AdminUI) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
 	st := a.proxy.GetInfo()
-	info := map[string]interface{}{
-		"activeRequests": st.ActiveRequests,
-		"config":         st.Config,
-		"stateStr":       st.State.String(),
-	}
-	infoBytes, _ := json.MarshalIndent(info, "", "    ")
+	infoBytes, _ := json.MarshalIndent(st, "", "    ")
 
 	if format == "json" {
 		w.Write(infoBytes)
 		return
 	}
 
-	err := statusTemplate.Execute(w, string(infoBytes))
+	err := statusTemplate.Execute(w, map[string]interface{}{
+		"stateStr": st.State.String(),
+		"info":     string(infoBytes),
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -141,7 +141,6 @@ func call(w http.ResponseWriter, block func() error) {
 
 	err := block()
 	if err != nil {
-		// TODO: limit what errors we show to users?
 		respond(w, http.StatusBadRequest, err.Error())
 	} else {
 		respond(w, http.StatusOK, "")
@@ -156,7 +155,6 @@ func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	cmd := r.Form["cmd"][0]
-	log.Println("Received cmd:", cmd)
 	switch cmd {
 	case "pause":
 		call(w, a.proxy.Pause)
@@ -164,6 +162,8 @@ func (a *AdminUI) handleHTTPCmd(w http.ResponseWriter, r *http.Request) {
 		call(w, a.proxy.Unpause)
 	case "reload":
 		call(w, a.proxy.Reload)
+	case "terminate-raw-connections":
+		call(w, a.proxy.TerminateRawConnections)
 	default:
 		respond(w, http.StatusBadRequest, fmt.Sprintf("Unknown cmd: '%s'", cmd))
 	}

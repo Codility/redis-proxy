@@ -12,8 +12,14 @@
     "certfile": "cert.pem",
     "keyfile": "key.pem"
   },
-  "admin": {
+  "listen_raw": {
     "addr": "127.0.0.1:7011",
+    "tls": true,
+    "certfile": "cert.pem",
+    "keyfile": "key.pem"
+  },
+  "admin": {
+    "addr": "127.0.0.1:7012",
     "tls": true,
     "certfile": "cert.pem",
     "keyfile": "key.pem"

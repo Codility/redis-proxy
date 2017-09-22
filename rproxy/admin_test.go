@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"testing"
@@ -28,9 +27,7 @@ func TestProxyAdminNonTLS(t *testing.T) {
 	proxy := mustStartTestProxy(t, conf)
 	defer proxy.Stop()
 
-	log.Print("before get")
 	res, err := http.Get(fmt.Sprintf("http://%s/", proxy.AdminAddr().String()))
-	log.Print("after get")
 	assert.Nil(t, err)
 	assert.Equal(t, res.StatusCode, 200)
 }
