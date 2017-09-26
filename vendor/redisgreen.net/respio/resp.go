@@ -5,7 +5,7 @@ package respio
 import (
 	"bufio"
 	"bytes"
-	"errors"
+	"fmt"
 	"io"
 	"strconv" // for converting integers to strings
 )
@@ -56,11 +56,19 @@ const (
 	INTEGER       = ':'
 	ARRAY         = '*'
 	ERROR         = '-'
+
+	MAX_MESSAGE_LENGTH_IN_LOG = 200
 )
 
-var (
-	ErrInvalidSyntax = errors.New("resp: invalid syntax")
-)
+func errInvalidSyntax(msg []byte) error {
+	var smsg string
+	if len(msg) > MAX_MESSAGE_LENGTH_IN_LOG {
+		smsg = string(msg[:MAX_MESSAGE_LENGTH_IN_LOG]) + "..."
+	} else {
+		smsg = string(msg)
+	}
+	return fmt.Errorf("resp: invalid syntax in %d:'%s'", len(msg), smsg)
+}
 
 type RESPReader struct {
 	*bufio.Reader
@@ -86,7 +94,7 @@ func (r *RESPReader) ReadObject() ([]byte, error) {
 	case ARRAY:
 		return r.readArray(line)
 	default:
-		return nil, ErrInvalidSyntax
+		return nil, errInvalidSyntax(line)
 	}
 }
 
@@ -100,7 +108,7 @@ func (r *RESPReader) readLine() (line []byte, err error) {
 		return line, nil
 	} else {
 		// Line was too short or \n wasn't preceded by \r.
-		return nil, ErrInvalidSyntax
+		return nil, errInvalidSyntax(line)
 	}
 }
 
