@@ -74,7 +74,14 @@ func TestRawProxy_Terminate(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	assert.Equal(t, proxy.GetInfo().RawConnections, 0)
+
+	deadline = time.Now().Add(time.Second)
+	for proxy.GetInfo().RawConnections > 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("Expected RawConnections to drop to 0")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 
 	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
