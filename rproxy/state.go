@@ -18,7 +18,6 @@ var proxyStateTxt = [...]string{
 	"running",
 	"pausing",
 	"paused",
-	"reloading",
 	"stopping",
 }
 
