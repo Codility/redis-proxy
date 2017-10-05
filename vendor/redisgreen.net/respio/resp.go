@@ -61,13 +61,14 @@ const (
 )
 
 func errInvalidSyntax(msg []byte) error {
-	var smsg string
+	var smsg, suff string
 	if len(msg) > MAX_MESSAGE_LENGTH_IN_LOG {
-		smsg = string(msg[:MAX_MESSAGE_LENGTH_IN_LOG]) + "..."
+		smsg = string(msg[:MAX_MESSAGE_LENGTH_IN_LOG])
+		suff = "[...]"
 	} else {
 		smsg = string(msg)
 	}
-	return fmt.Errorf("resp: invalid syntax in %d:'%s'", len(msg), smsg)
+	return fmt.Errorf("resp: invalid syntax in %#v%s", smsg, suff)
 }
 
 type RESPReader struct {
