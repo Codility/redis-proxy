@@ -131,7 +131,7 @@ func (s *FakeRedisServer) handleConnection(conn net.Conn) {
 				continue
 			}
 			if err != io.EOF {
-				log.Print(err)
+				log.Print("fakeredis: ", err)
 			}
 			return
 		}
