@@ -60,15 +60,14 @@ func (a *AdminUI) Stop() {
 func (a *AdminUI) buildMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/cmd/", a.handleHTTPCmd)
-	mux.HandleFunc("/status.json", func(w http.ResponseWriter, r *http.Request) {
-		a.handleHTTPStatus(w, r, "json")
-	})
+	mux.HandleFunc("/status.json", a.handleHTTPStatusJSON)
+	mux.HandleFunc("/info.json", a.handleHTTPInfo)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		a.handleHTTPStatus(w, r, "html")
+		a.handleHTTPStatusHTML(w, r)
 	})
 	mux.Handle("/metrics/", promhttp.Handler())
 	return mux
@@ -86,7 +85,7 @@ const statusHtml = `<!DOCTYPE html>
 State: {{.stateStr}}
 {{.info}}
 		</pre>
-		<div>As JSON: <a href="status.json">here</a></div>
+		<div>As JSON: <a href="info.json">here</a></div>
 		<div>Metrics: <a href="/metrics/">prometheus endpoint</a></div>
 		<form action="/cmd/" method="POST">
 			<button type="submit" name="cmd" value="pause">pause</button>
@@ -98,22 +97,34 @@ State: {{.stateStr}}
 </html>
 `
 
-func (a *AdminUI) handleHTTPStatus(w http.ResponseWriter, r *http.Request, format string) {
-	st := a.proxy.GetInfo()
-	infoBytes, _ := json.MarshalIndent(st, "", "    ")
-
-	if format == "json" {
-		w.Write(infoBytes)
-		return
-	}
+func (a *AdminUI) handleHTTPStatusHTML(w http.ResponseWriter, r *http.Request) {
+	info := a.proxy.GetInfo()
+	infoBytes, _ := json.MarshalIndent(info, "", "    ")
 
 	err := statusTemplate.Execute(w, map[string]interface{}{
-		"stateStr": st.State.String(),
-		"info":     string(infoBytes),
+		"info": string(infoBytes),
 	})
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (a *AdminUI) handleHTTPStatusJSON(w http.ResponseWriter, r *http.Request) {
+	info := a.proxy.GetInfo()
+	infoBytes, _ := json.MarshalIndent(map[string]interface{}{
+		"Warning":         "DEPRECATED, DO NOT USE THIS FILE, use /info.json instead",
+		"ActiveRequests":  info.ActiveRequests,
+		"WaitingRequests": info.WaitingRequests,
+		"State":           info.State,
+		"Config":          info.Config,
+		"RawConnections":  info.RawConnections,
+	}, "", "    ")
+	w.Write(infoBytes)
+}
+
+func (a *AdminUI) handleHTTPInfo(w http.ResponseWriter, r *http.Request) {
+	infoBytes, _ := json.MarshalIndent(a.proxy.GetInfo(), "", "    ")
+	w.Write(infoBytes)
 }
 
 type JsonHttpResponse struct {
