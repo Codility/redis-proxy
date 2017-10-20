@@ -8,3 +8,14 @@ type ProxyInfo struct {
 	Config          *Config    `json:"config"`
 	RawConnections  int        `json:"raw_connections"`
 }
+
+func (p *ProxyInfo) SanitizedForPublication() *ProxyInfo {
+	return &ProxyInfo{
+		ActiveRequests:  p.ActiveRequests,
+		WaitingRequests: p.WaitingRequests,
+		State:           p.State,
+		StateStr:        p.StateStr,
+		Config:          p.Config.SanitizedForPublication(),
+		RawConnections:  p.RawConnections,
+	}
+}

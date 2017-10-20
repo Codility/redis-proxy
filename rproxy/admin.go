@@ -98,7 +98,7 @@ State: {{.stateStr}}
 `
 
 func (a *AdminUI) handleHTTPStatusHTML(w http.ResponseWriter, r *http.Request) {
-	info := a.proxy.GetInfo()
+	info := a.proxy.GetInfo().SanitizedForPublication()
 	infoBytes, _ := json.MarshalIndent(info, "", "    ")
 
 	err := statusTemplate.Execute(w, map[string]interface{}{
@@ -110,20 +110,21 @@ func (a *AdminUI) handleHTTPStatusHTML(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AdminUI) handleHTTPStatusJSON(w http.ResponseWriter, r *http.Request) {
-	info := a.proxy.GetInfo()
+	info := a.proxy.GetInfo().SanitizedForPublication()
 	infoBytes, _ := json.MarshalIndent(map[string]interface{}{
 		"!Warning":        "DEPRECATED, DO NOT USE THIS FILE, use /info.json instead",
 		"ActiveRequests":  info.ActiveRequests,
 		"WaitingRequests": info.WaitingRequests,
 		"State":           info.State,
-		"Config":          info.Config,
+		"Config":          info.Config.SanitizedForPublication(),
 		"RawConnections":  info.RawConnections,
 	}, "", "    ")
 	w.Write(infoBytes)
 }
 
 func (a *AdminUI) handleHTTPInfo(w http.ResponseWriter, r *http.Request) {
-	infoBytes, _ := json.MarshalIndent(a.proxy.GetInfo(), "", "    ")
+	info := a.proxy.GetInfo().SanitizedForPublication()
+	infoBytes, _ := json.MarshalIndent(info, "", "    ")
 	w.Write(infoBytes)
 }
 

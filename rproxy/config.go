@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+const (
+	SanitizedPass = "[removed]"
+)
+
 ////////////////////////////////////////
 // ErrorList
 
@@ -188,6 +192,18 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 	return errors
 }
 
+func (a *AddrSpec) SanitizedForPublication() *AddrSpec {
+	return &AddrSpec{
+		Addr:       a.Addr,
+		Pass:       SanitizedPass,
+		TLS:        a.TLS,
+		Network:    a.Network,
+		CertFile:   a.CertFile,
+		KeyFile:    a.KeyFile,
+		CACertFile: a.CACertFile,
+	}
+}
+
 ////////////////////////////////////////
 // Config
 
@@ -236,6 +252,17 @@ func (c *Config) AsJSON() string {
 		return ""
 	}
 	return string(res)
+}
+
+func (c *Config) SanitizedForPublication() *Config {
+	return &Config{
+		Uplink:          *c.Uplink.SanitizedForPublication(),
+		Listen:          *c.Listen.SanitizedForPublication(),
+		ListenRaw:       *c.ListenRaw.SanitizedForPublication(),
+		Admin:           *c.Admin.SanitizedForPublication(),
+		ReadTimeLimitMs: c.ReadTimeLimitMs,
+		LogMessages:     c.LogMessages,
+	}
 }
 
 ////////////////////////////////////////

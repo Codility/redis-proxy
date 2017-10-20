@@ -114,7 +114,7 @@ func TestProxyAdminStatusJSON(t *testing.T) {
 	expect("RawConnections", 0.0)
 
 	expect("Config/uplink/addr", srv.Addr().String())
-	expect("Config/uplink/pass", "")
+	expect("Config/uplink/pass", "[removed]")
 	expect("Config/uplink/tls", false)
 	expect("Config/uplink/network", "")
 	expect("Config/uplink/certfile", "")
@@ -122,7 +122,7 @@ func TestProxyAdminStatusJSON(t *testing.T) {
 	expect("Config/uplink/cacertfile", "")
 
 	expect("Config/listen/addr", "127.0.0.1:0")
-	expect("Config/listen/pass", "")
+	expect("Config/listen/pass", "[removed]")
 	expect("Config/listen/tls", false)
 	expect("Config/listen/network", "")
 	expect("Config/listen/certfile", "")
@@ -130,7 +130,7 @@ func TestProxyAdminStatusJSON(t *testing.T) {
 	expect("Config/listen/cacertfile", "")
 
 	expect("Config/listen_raw/addr", "")
-	expect("Config/listen_raw/pass", "")
+	expect("Config/listen_raw/pass", "[removed]")
 	expect("Config/listen_raw/tls", false)
 	expect("Config/listen_raw/network", "")
 	expect("Config/listen_raw/certfile", "")
@@ -138,7 +138,7 @@ func TestProxyAdminStatusJSON(t *testing.T) {
 	expect("Config/listen_raw/cacertfile", "")
 
 	expect("Config/admin/addr", "127.0.0.1:0")
-	expect("Config/admin/pass", "")
+	expect("Config/admin/pass", "[removed]")
 	expect("Config/admin/tls", false)
 	expect("Config/admin/network", "")
 	expect("Config/admin/certfile", "")
@@ -196,7 +196,7 @@ func TestProxyAdminInfoJSON(t *testing.T) {
 	expect("raw_connections", 0.0)
 
 	expect("config/uplink/addr", srv.Addr().String())
-	expect("config/uplink/pass", "")
+	expect("config/uplink/pass", "[removed]")
 	expect("config/uplink/tls", false)
 	expect("config/uplink/network", "")
 	expect("config/uplink/certfile", "")
@@ -204,7 +204,7 @@ func TestProxyAdminInfoJSON(t *testing.T) {
 	expect("config/uplink/cacertfile", "")
 
 	expect("config/listen/addr", "127.0.0.1:0")
-	expect("config/listen/pass", "")
+	expect("config/listen/pass", "[removed]")
 	expect("config/listen/tls", false)
 	expect("config/listen/network", "")
 	expect("config/listen/certfile", "")
@@ -212,7 +212,7 @@ func TestProxyAdminInfoJSON(t *testing.T) {
 	expect("config/listen/cacertfile", "")
 
 	expect("config/listen_raw/addr", "")
-	expect("config/listen_raw/pass", "")
+	expect("config/listen_raw/pass", "[removed]")
 	expect("config/listen_raw/tls", false)
 	expect("config/listen_raw/network", "")
 	expect("config/listen_raw/certfile", "")
@@ -220,7 +220,7 @@ func TestProxyAdminInfoJSON(t *testing.T) {
 	expect("config/listen_raw/cacertfile", "")
 
 	expect("config/admin/addr", "127.0.0.1:0")
-	expect("config/admin/pass", "")
+	expect("config/admin/pass", "[removed]")
 	expect("config/admin/tls", false)
 	expect("config/admin/network", "")
 	expect("config/admin/certfile", "")
