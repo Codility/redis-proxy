@@ -112,7 +112,7 @@ func (a *AdminUI) handleHTTPStatusHTML(w http.ResponseWriter, r *http.Request) {
 func (a *AdminUI) handleHTTPStatusJSON(w http.ResponseWriter, r *http.Request) {
 	info := a.proxy.GetInfo()
 	infoBytes, _ := json.MarshalIndent(map[string]interface{}{
-		"Warning":         "DEPRECATED, DO NOT USE THIS FILE, use /info.json instead",
+		"!Warning":        "DEPRECATED, DO NOT USE THIS FILE, use /info.json instead",
 		"ActiveRequests":  info.ActiveRequests,
 		"WaitingRequests": info.WaitingRequests,
 		"State":           info.State,
