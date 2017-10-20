@@ -147,8 +147,6 @@ func TestProxyAdminStatusJSON(t *testing.T) {
 }
 
 func TestProxyAdminInfoJSON(t *testing.T) {
-	// Old-style status.json page
-
 	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
 
