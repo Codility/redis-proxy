@@ -80,6 +80,7 @@ func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
 			ActiveRequests:  proxy.activeRequests,
 			WaitingRequests: len(proxy.channels.requestPermission),
 			State:           proxy.State(),
+			StateStr:        proxy.State().String(),
 			Config:          proxy.GetConfig(),
 			RawConnections:  rawConns,
 		}
