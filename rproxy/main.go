@@ -21,8 +21,12 @@ func (proxy *Proxy) Run() {
 	}
 
 	proxy.adminUI = NewAdminUI(proxy)
-	proxy.adminUI.Start()
-
+	if err := proxy.adminUI.Start(); err != nil {
+		log.Println("Could not start admin UI: ", err)
+		proxy.SetState(ProxyStopped)
+		proxy.channels.stopped <- struct{}{}
+		return
+	}
 	proxy.SetState(ProxyRunning)
 
 	channelMap := map[ProxyState]*ProxyChannels{
@@ -61,6 +65,7 @@ func (proxy *Proxy) Run() {
 	proxy.adminUI = nil
 
 	proxy.SetState(ProxyStopped)
+	<-proxy.channels.stopped
 }
 
 func (proxy *Proxy) handleChannels(channels *ProxyChannels) {

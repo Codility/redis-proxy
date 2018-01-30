@@ -39,6 +39,7 @@ type ProxyChannels struct {
 	releasePermission chan struct{}
 	info              chan chan *ProxyInfo
 	command           chan commandCall
+	stopped           chan struct{}
 }
 
 ////////////////////////////////////////
@@ -63,6 +64,7 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 			releasePermission: make(chan struct{}, MaxConnections),
 			info:              make(chan chan *ProxyInfo),
 			command:           make(chan commandCall),
+			stopped:           make(chan struct{}),
 		},
 		configLoader: cl,
 		config:       config,
@@ -207,4 +209,5 @@ func (proxy *Proxy) listenForClients(ln *Listener) {
 			go NewCliHandler(rc, proxy).Run()
 		}
 	}
+	proxy.channels.stopped <- struct{}{}
 }
