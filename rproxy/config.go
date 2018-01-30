@@ -223,7 +223,9 @@ type ConfigLoader interface {
 func (c *Config) Prepare() ErrorList {
 	errList := ErrorList{}
 
-	errList.Append(c.Admin.Prepare("admin", true))
+	if c.Admin.Addr != "" {
+		errList.Append(c.Admin.Prepare("admin", true))
+	}
 	errList.Append(c.Listen.Prepare("listen", true))
 	errList.Append(c.Uplink.Prepare("uplink", false))
 

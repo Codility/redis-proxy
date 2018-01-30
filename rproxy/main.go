@@ -20,8 +20,10 @@ func (proxy *Proxy) Run() {
 		proxy.rawProxy.Start()
 	}
 
-	proxy.adminUI = NewAdminUI(proxy)
-	proxy.adminUI.Start()
+	if proxy.config.Admin.Addr != "" {
+		proxy.adminUI = NewAdminUI(proxy)
+		proxy.adminUI.Start()
+	}
 
 	proxy.SetState(ProxyRunning)
 
@@ -57,8 +59,10 @@ func (proxy *Proxy) Run() {
 		proxy.handleChannels(channelMap[st])
 	}
 
-	proxy.adminUI.Stop()
-	proxy.adminUI = nil
+	if proxy.adminUI != nil {
+		proxy.adminUI.Stop()
+		proxy.adminUI = nil
+	}
 
 	proxy.SetState(ProxyStopped)
 }
