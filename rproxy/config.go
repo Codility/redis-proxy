@@ -308,7 +308,6 @@ func NewTestConfigLoader(uplinkAddr string) *TestConfigLoader {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: uplinkAddr},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 }

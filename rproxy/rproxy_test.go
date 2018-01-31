@@ -29,7 +29,6 @@ func TestProxy(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	assert.Nil(t, err)
@@ -61,7 +60,6 @@ func TestProxyUnix(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: socketPath, Network: "unix"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	assert.Nil(t, err)
@@ -95,7 +93,6 @@ func TestProxyTLS(t *testing.T) {
 				CertFile: "../test_data/tls/server/cert.pem",
 				KeyFile:  "../test_data/tls/server/key.pem",
 			},
-			Admin: AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	assert.Nil(t, err)
@@ -135,7 +132,6 @@ func TestProxyUplinkTLS(t *testing.T) {
 				CertFile: "../test_data/tls/server/cert.pem",
 				KeyFile:  "../test_data/tls/server/key.pem",
 			},
-			Admin: AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	defer firstProxy.Stop()
@@ -148,7 +144,6 @@ func TestProxyUplinkTLS(t *testing.T) {
 				CACertFile: "../test_data/tls/testca/cacert.pem",
 			},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 	defer secondProxy.Stop()
@@ -167,7 +162,6 @@ func TestProxyUplinkUnix(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String(), Network: "unix"},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		}})
 	defer proxy.Stop()
 
@@ -187,7 +181,6 @@ func TestProxySwitch(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv_0.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 
@@ -200,7 +193,6 @@ func TestProxySwitch(t *testing.T) {
 	conf.Replace(&Config{
 		Uplink: AddrSpec{Addr: srv_1.Addr().String()},
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
-		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
@@ -225,7 +217,6 @@ func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv_0.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 
@@ -238,7 +229,6 @@ func TestProxyRejectsBrokenConfigOnSwitch(t *testing.T) {
 	conf.Replace(&Config{
 		Uplink: AddrSpec{Addr: "127.0.0.1:0"}, // <- incorrect uplink address
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
-		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
 
 	assert.Equal(t, c.MustCall(resp.MsgFromStrings("get", "a")).String(), "$5\r\nsrv-0\r\n")
@@ -256,7 +246,6 @@ func TestProxyAuthenticatesClient(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0", Pass: "test-pass"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 
@@ -292,7 +281,6 @@ func TestOpenProxyBlocksAuthCommands(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 
@@ -338,7 +326,6 @@ func TestProxyCanAuthenticateWithRedis(t *testing.T) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: redisUrl, Pass: "test-pass"},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 
@@ -372,7 +359,6 @@ func TestProxyKeepsTrackOfSelectedDB(t *testing.T) {
 	conf.Replace(&Config{
 		Uplink: AddrSpec{Addr: srv_1.Addr().String()},
 		Listen: AddrSpec{Addr: "127.0.0.1:0"},
-		Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 	})
 	assert.Nil(t, proxy.Reload())
 	c.MustCall(resp.MsgFromStrings("SET", "k", "v"))
@@ -405,7 +391,6 @@ func startFakeredisAndProxy(t *testing.T) (*fakeredis.FakeRedisServer, *Proxy) {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: srv.Addr().String()},
 			Listen: AddrSpec{Addr: "127.0.0.1:0", Pass: "test-pass"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	})
 
