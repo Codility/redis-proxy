@@ -119,11 +119,15 @@ func (as *AddrSpec) Listen() (*Listener, error) {
 		return nil, err
 	}
 
+	// AddrDeadliner requires funcs that are implemented on both
+	// net.TCPListener and net.UnixListener.  We limit the values
+	// for `network` above, so those should be the only cases, and
+	// so it's okay to assume it will crash otherwise.
 	if !as.TLS {
-		return &Listener{ln, ln}, nil
+		return &Listener{ln, ln.(AddrDeadliner)}, nil
 	}
 	tlsLn := tls.NewListener(ln, as.GetTLSConfig())
-	return &Listener{tlsLn, ln}, nil
+	return &Listener{tlsLn, ln.(AddrDeadliner)}, nil
 }
 
 func (as *AddrSpec) GetTLSConfig() *tls.Config {
