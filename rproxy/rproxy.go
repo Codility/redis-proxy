@@ -207,11 +207,10 @@ func (proxy *Proxy) startListening() error {
 
 func (proxy *Proxy) listenForClients() {
 	defer func() {
-		proxy.listener.Close()
 		proxy.listener = nil
 	}()
 
-	for proxy.State().IsStartingOrAlive() {
+	for {
 		proxy.listener.SetDeadline(time.Now().Add(time.Second))
 		conn, err := proxy.listener.Accept()
 		if err != nil {
