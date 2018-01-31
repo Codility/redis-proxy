@@ -25,7 +25,7 @@ type ConfigHolder interface {
 type Proxy struct {
 	configLoader ConfigLoader
 	config       *Config
-	listenAddr   net.Addr
+	listener     *Listener
 	adminUI      *AdminUI
 	rawProxy     *RawProxy
 
@@ -39,7 +39,6 @@ type ProxyChannels struct {
 	releasePermission chan struct{}
 	info              chan chan *ProxyInfo
 	command           chan commandCall
-	stopped           chan struct{}
 }
 
 ////////////////////////////////////////
@@ -64,7 +63,6 @@ func NewProxy(cl ConfigLoader) (*Proxy, error) {
 			releasePermission: make(chan struct{}, MaxConnections),
 			info:              make(chan chan *ProxyInfo),
 			command:           make(chan commandCall),
-			stopped:           make(chan struct{}),
 		},
 		configLoader: cl,
 		config:       config,
@@ -83,7 +81,7 @@ func (proxy *Proxy) Start() {
 }
 
 func (proxy *Proxy) ListenAddr() net.Addr {
-	return proxy.listenAddr
+	return proxy.listener.Addr()
 }
 
 func (proxy *Proxy) ListenRawAddr() net.Addr {
@@ -134,7 +132,21 @@ func (proxy *Proxy) Reload() error {
 }
 
 func (proxy *Proxy) Stop() error {
-	return proxy.command(CmdStop).err
+	if err := proxy.command(CmdStop).err; err != nil {
+		return err
+	}
+	for !(proxy.State() == ProxyStopped && proxy.listener == nil) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	return nil
+}
+
+func (proxy *Proxy) Close() {
+	proxy.SetState(ProxyStopped)
+	proxy.listener.Close()
+	for proxy.listener != nil {
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 func (proxy *Proxy) TerminateRawConnections() error {
@@ -188,18 +200,29 @@ func (proxy *Proxy) startListening() error {
 	if err != nil {
 		return err
 	}
-	proxy.listenAddr = ln.Addr()
-	go proxy.listenForClients(ln)
+	proxy.listener = ln
+	go proxy.listenForClients()
 	return nil
 }
 
-func (proxy *Proxy) listenForClients(ln *Listener) {
-	defer ln.Close()
+func (proxy *Proxy) listenForClients() {
+	defer func() {
+		proxy.listener.Close()
+		proxy.listener = nil
+	}()
 
 	for proxy.State().IsStartingOrAlive() {
-		ln.SetDeadline(time.Now().Add(time.Second))
-		conn, err := ln.Accept()
+		proxy.listener.SetDeadline(time.Now().Add(time.Second))
+		conn, err := proxy.listener.Accept()
 		if err != nil {
+			// Check if we are shutting down. Ideally, we would
+			// like to check whether the error comes from
+			// listener.Close(), but that is not easy:
+			// http://zhen.org/blog/graceful-shutdown-of-go-net-dot-listeners/
+			if !proxy.State().IsStartingOrAlive() {
+				break
+			}
+
 			if resp.IsNetTimeout(err) {
 				continue
 			}
@@ -209,5 +232,4 @@ func (proxy *Proxy) listenForClients(ln *Listener) {
 			go NewCliHandler(rc, proxy).Run()
 		}
 	}
-	proxy.channels.stopped <- struct{}{}
 }

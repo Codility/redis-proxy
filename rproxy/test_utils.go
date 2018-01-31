@@ -64,7 +64,7 @@ func mustStartTestProxy(t *testing.T, conf *TestConfigLoader) *Proxy {
 }
 
 func waitUntil(t *testing.T, expr func() bool) {
-	const duration = 2 * time.Second
+	const duration = time.Second
 
 	deadline := time.Now().Add(duration)
 	for time.Now().Before(deadline) {
