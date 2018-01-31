@@ -15,7 +15,11 @@ func (proxy *Proxy) Run() {
 	}
 	log.Println("Managed proxy:", proxy.ListenAddr())
 
-	defer proxy.Close()
+	defer func() {
+		proxy.SetState(ProxyStopped)
+		proxy.listener.Close()
+		proxy.waitForShutdown()
+	}()
 
 	if proxy.config.ListenRaw.Addr != "" {
 		proxy.rawProxy = NewRawProxy(proxy)

@@ -135,16 +135,12 @@ func (proxy *Proxy) Stop() error {
 	if err := proxy.command(CmdStop).err; err != nil {
 		return err
 	}
-	for !(proxy.State() == ProxyStopped && proxy.listener == nil) {
-		time.Sleep(50 * time.Millisecond)
-	}
+	proxy.waitForShutdown()
 	return nil
 }
 
-func (proxy *Proxy) Close() {
-	proxy.SetState(ProxyStopped)
-	proxy.listener.Close()
-	for proxy.listener != nil {
+func (proxy *Proxy) waitForShutdown() {
+	for !(proxy.State() == ProxyStopped && proxy.listener == nil) {
 		time.Sleep(50 * time.Millisecond)
 	}
 }
