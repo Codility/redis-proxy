@@ -15,6 +15,11 @@ func (proxy *Proxy) Run() {
 	}
 	log.Println("Managed proxy:", proxy.ListenAddr())
 
+	defer func() {
+		proxy.SetState(ProxyStopped)
+		<-proxy.channels.stopped
+	}()
+
 	if proxy.config.ListenRaw.Addr != "" {
 		proxy.rawProxy = NewRawProxy(proxy)
 		proxy.rawProxy.Start()
@@ -23,10 +28,14 @@ func (proxy *Proxy) Run() {
 	proxy.adminUI = NewAdminUI(proxy)
 	if err := proxy.adminUI.Start(); err != nil {
 		log.Println("Could not start admin UI: ", err)
-		proxy.SetState(ProxyStopped)
-		proxy.channels.stopped <- struct{}{}
 		return
 	}
+
+	defer func() {
+		proxy.adminUI.Stop()
+		proxy.adminUI = nil
+	}()
+
 	proxy.SetState(ProxyRunning)
 
 	channelMap := map[ProxyState]*ProxyChannels{
@@ -60,12 +69,6 @@ func (proxy *Proxy) Run() {
 		}
 		proxy.handleChannels(channelMap[st])
 	}
-
-	proxy.adminUI.Stop()
-	proxy.adminUI = nil
-
-	proxy.SetState(ProxyStopped)
-	<-proxy.channels.stopped
 }
 
 func (proxy *Proxy) handleChannels(channels *ProxyChannels) {
