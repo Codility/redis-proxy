@@ -14,6 +14,22 @@ import (
 	"github.com/stvp/assert"
 )
 
+func TestProxyAdminDisabled(t *testing.T) {
+	srv := fakeredis.Start("srv", "tcp")
+	defer srv.Stop()
+
+	conf := &TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: srv.Addr().String()},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	}
+	proxy := mustStartTestProxy(t, conf)
+	defer proxy.Stop()
+
+	assert.Nil(t, proxy.adminUI)
+}
+
 func TestProxyAdminNonTLS(t *testing.T) {
 	srv := fakeredis.Start("srv", "tcp")
 	defer srv.Stop()
