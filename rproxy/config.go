@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -278,6 +279,31 @@ func NewFileConfigLoader(name string) *FileConfigLoader {
 
 func (f *FileConfigLoader) Load() (*Config, error) {
 	configJson, err := ioutil.ReadFile(f.fileName)
+	if err != nil {
+		return nil, err
+	}
+	var config Config
+	return &config, json.Unmarshal(configJson, &config)
+}
+
+////////////////////////////////////////
+// InputConfigLoader
+
+type InputConfigLoader struct {
+	reader io.Reader
+	loaded bool
+}
+
+func NewInputConfigLoader(reader io.Reader) *InputConfigLoader {
+	return &InputConfigLoader{reader: reader, loaded: false}
+}
+
+func (c *InputConfigLoader) Load() (*Config, error) {
+	if c.loaded {
+		return nil, errors.New("Cannot reload config when it's read from input.")
+	}
+	c.loaded = true
+	configJson, err := ioutil.ReadAll(c.reader)
 	if err != nil {
 		return nil, err
 	}
