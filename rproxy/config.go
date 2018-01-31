@@ -287,7 +287,7 @@ func (f *FileConfigLoader) Load() (*Config, error) {
 }
 
 ////////////////////////////////////////
-// StdinConfigLoader
+// InputConfigLoader
 
 type InputConfigLoader struct {
 	reader io.Reader
@@ -300,7 +300,7 @@ func NewInputConfigLoader(reader io.Reader) *InputConfigLoader {
 
 func (c *InputConfigLoader) Load() (*Config, error) {
 	if c.loaded {
-		return nil, errors.New("Cannot reload stdin config")
+		return nil, errors.New("Cannot reload config when it's read from input.")
 	}
 	c.loaded = true
 	configJson, err := ioutil.ReadAll(c.reader)
