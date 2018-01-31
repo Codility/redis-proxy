@@ -73,6 +73,7 @@ func TestProxyUnix(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
+	c.Close()
 	proxy.Stop()
 	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
 	waitUntil(t, func() bool {
