@@ -40,8 +40,8 @@ func TestProxy(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
-	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
+	err = proxy.Stop()
+	assert.Nil(t, err)
 }
 
 func TestProxyUnix(t *testing.T) {
@@ -72,12 +72,11 @@ func TestProxyUnix(t *testing.T) {
 	assert.Equal(t, srv.ReqCnt(), 1)
 
 	c.Close()
-	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
-	waitUntil(t, func() bool {
-		_, err := os.Stat(socketPath)
-		return os.IsNotExist(err)
-	})
+	err = proxy.Stop()
+	assert.Nil(t, err)
+
+	_, err = os.Stat(socketPath)
+	assert.True(t, os.IsNotExist(err))
 }
 
 func TestProxyTLS(t *testing.T) {
@@ -115,8 +114,8 @@ func TestProxyTLS(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
-	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
+	err = proxy.Stop()
+	assert.Nil(t, err)
 }
 
 func TestProxyUplinkTLS(t *testing.T) {

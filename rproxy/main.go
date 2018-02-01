@@ -17,7 +17,8 @@ func (proxy *Proxy) Run() {
 
 	defer func() {
 		proxy.SetState(ProxyStopped)
-		<-proxy.channels.stopped
+		proxy.listener.Close()
+		proxy.waitForShutdown()
 	}()
 
 	if proxy.config.ListenRaw.Addr != "" {

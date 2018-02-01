@@ -11,12 +11,18 @@ import (
 )
 
 var (
-	config_file = flag.String("f", "config.json", "Config file")
+	config_file = flag.String("f", "config.json", "Config file (or \"-\" for standard input)")
 )
 
 func main() {
 	flag.Parse()
-	proxy, err := rproxy.NewProxy(rproxy.NewFileConfigLoader(*config_file))
+	var configLoader rproxy.ConfigLoader
+	if *config_file == "-" {
+		configLoader = rproxy.NewInputConfigLoader(os.Stdin)
+	} else {
+		configLoader = rproxy.NewFileConfigLoader(*config_file)
+	}
+	proxy, err := rproxy.NewProxy(configLoader)
 	if err != nil {
 		panic(err)
 	}
