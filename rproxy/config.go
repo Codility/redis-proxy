@@ -232,7 +232,9 @@ type ConfigLoader interface {
 func (c *Config) Prepare() ErrorList {
 	errList := ErrorList{}
 
-	errList.Append(c.Admin.Prepare("admin", true))
+	if c.Admin.Addr != "" {
+		errList.Append(c.Admin.Prepare("admin", true))
+	}
 	errList.Append(c.Listen.Prepare("listen", true))
 	errList.Append(c.Uplink.Prepare("uplink", false))
 
@@ -332,7 +334,6 @@ func NewTestConfigLoader(uplinkAddr string) *TestConfigLoader {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: uplinkAddr},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 }

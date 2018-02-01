@@ -26,16 +26,18 @@ func (proxy *Proxy) Run() {
 		proxy.rawProxy.Start()
 	}
 
-	proxy.adminUI = NewAdminUI(proxy)
-	if err := proxy.adminUI.Start(); err != nil {
-		log.Println("Could not start admin UI: ", err)
-		return
-	}
+	if proxy.config.Admin.Addr != "" {
+		proxy.adminUI = NewAdminUI(proxy)
+		if err := proxy.adminUI.Start(); err != nil {
+			log.Println("Could not start admin UI: ", err)
+			return
+		}
 
-	defer func() {
-		proxy.adminUI.Stop()
-		proxy.adminUI = nil
-	}()
+		defer func() {
+			proxy.adminUI.Stop()
+			proxy.adminUI = nil
+		}()
+	}
 
 	proxy.SetState(ProxyRunning)
 
