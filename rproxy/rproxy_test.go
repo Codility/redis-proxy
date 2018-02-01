@@ -41,8 +41,44 @@ func TestProxy(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
-	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
+	err = proxy.Stop()
+	assert.Nil(t, err)
+}
+
+func TestProxyUnix(t *testing.T) {
+	srv := fakeredis.Start("fake", "tcp")
+	defer srv.Stop()
+
+	dir, err := ioutil.TempDir("/tmp", "rproxy")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(dir)
+
+	socketPath := dir + "/rproxy.sock"
+
+	proxy, err := NewProxy(&TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: srv.Addr().String()},
+			Listen: AddrSpec{Addr: socketPath, Network: "unix"},
+			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	})
+	assert.Nil(t, err)
+	proxy.Start()
+	assert.True(t, proxy.State().IsAlive())
+
+	c := resp.MustDial("unix", socketPath, 0, false)
+	resp := c.MustCall(resp.MsgFromStrings("get", "a"))
+	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
+	assert.Equal(t, srv.ReqCnt(), 1)
+
+	c.Close()
+	err = proxy.Stop()
+	assert.Nil(t, err)
+
+	_, err = os.Stat(socketPath)
+	assert.True(t, os.IsNotExist(err))
 }
 
 func TestProxyTLS(t *testing.T) {
@@ -81,8 +117,8 @@ func TestProxyTLS(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 	assert.Equal(t, srv.ReqCnt(), 1)
 
-	proxy.Stop()
-	waitUntil(t, func() bool { return !proxy.State().IsAlive() })
+	err = proxy.Stop()
+	assert.Nil(t, err)
 }
 
 func TestProxyUplinkTLS(t *testing.T) {
