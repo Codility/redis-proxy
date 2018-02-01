@@ -103,6 +103,20 @@ func TestConfigValidation(t *testing.T) {
 			KeyFile:  "../test_data/tls/server/key.pem",
 		},
 	})
+	assertValid(&Config{
+		Uplink: AddrSpec{Addr: TLSAddr, TLS: true, SkipVerify: true},
+		Listen: AddrSpec{Addr: "127.0.0.1:0",
+			TLS:      true,
+			CertFile: "../test_data/tls/server/cert.pem",
+			KeyFile:  "../test_data/tls/server/key.pem",
+		},
+		Admin: AddrSpec{Addr: "127.0.0.1:0",
+			TLS:      true,
+			CertFile: "../test_data/tls/server/cert.pem",
+			KeyFile:  "../test_data/tls/server/key.pem",
+		},
+	})
+
 	assertInvalid(&Config{
 		Uplink: AddrSpec{Addr: nonTLSAddr,
 			TLS:        true,

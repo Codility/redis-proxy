@@ -62,6 +62,7 @@ type AddrSpec struct {
 	CertFile   string `json:"certfile"`
 	KeyFile    string `json:"keyfile"`
 	CACertFile string `json:"cacertfile"`
+	SkipVerify bool   `json:"skipverify,omitempty"`
 }
 
 func (as *AddrSpec) AsJSON() string {
@@ -85,22 +86,25 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 		return net.Dial(network, as.Addr)
 	}
 
-	// TODO: read the PEM once, not at every accept
-	certPEM, err := ioutil.ReadFile(as.CACertFile)
-	if err != nil {
-		log.Print("Could not load cert: " + err.Error())
-		return nil, err
-	}
-
 	roots := x509.NewCertPool()
-	if !roots.AppendCertsFromPEM(certPEM) {
-		err := errors.New("Could not add cert to pool")
-		log.Fatal(err)
-		return nil, err
+	if !as.SkipVerify {
+		// TODO: read the PEM once, not at every accept
+		certPEM, err := ioutil.ReadFile(as.CACertFile)
+		if err != nil {
+			log.Print("Could not load cert: " + err.Error())
+			return nil, err
+		}
+
+		if !roots.AppendCertsFromPEM(certPEM) {
+			err := errors.New("Could not add cert to pool")
+			log.Fatal(err)
+			return nil, err
+		}
 	}
 
 	return tls.Dial(network, as.Addr, &tls.Config{
-		RootCAs: roots,
+		RootCAs:            roots,
+		InsecureSkipVerify: as.SkipVerify,
 	})
 }
 
@@ -177,10 +181,12 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 				errors.Add("could not load " + name + ".keyfile: " + as.KeyFile)
 			}
 		} else {
-			if as.CACertFile == "" {
-				errors.Add("uplink.tls requires cacertfile")
-			} else if !pemFileReadable(as.CACertFile) {
-				errors.Add("could not load " + name + ".cacertfile: " + as.CACertFile)
+			if !as.SkipVerify {
+				if as.CACertFile == "" {
+					errors.Add("uplink.tls requires cacertfile")
+				} else if !pemFileReadable(as.CACertFile) {
+					errors.Add("could not load " + name + ".cacertfile: " + as.CACertFile)
+				}
 			}
 		}
 	}
