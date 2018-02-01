@@ -5,10 +5,15 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"strings"
+)
+
+const (
+	SanitizedPass = "[removed]"
 )
 
 ////////////////////////////////////////
@@ -100,22 +105,30 @@ func (as *AddrSpec) Dial() (net.Conn, error) {
 }
 
 func (as *AddrSpec) Listen() (*Listener, error) {
-	if !(as.Network == "" || as.Network == "tcp") {
-		err := errors.New("Only TCP network supported for listening")
-		return nil, err
+	network := "tcp"
+	if as.Network != "" {
+		network = as.Network
 	}
 
-	ln, err := net.Listen("tcp", as.Addr)
+	if !(network == "tcp" || network == "unix") {
+		return nil, errors.New("Unsupported network for listening: " + network)
+	}
+
+	ln, err := net.Listen(network, as.Addr)
 	if err != nil {
 		log.Fatalf("Could not listen: %s", err)
 		return nil, err
 	}
 
+	// AddrDeadliner requires funcs that are implemented on both
+	// net.TCPListener and net.UnixListener.  We limit the values
+	// for `network` above, so those should be the only cases, and
+	// so it's okay to assume it will crash otherwise.
 	if !as.TLS {
-		return &Listener{ln, ln.(*net.TCPListener)}, nil
+		return &Listener{ln, ln.(AddrDeadliner)}, nil
 	}
 	tlsLn := tls.NewListener(ln, as.GetTLSConfig())
-	return &Listener{tlsLn, ln.(*net.TCPListener)}, nil
+	return &Listener{tlsLn, ln.(AddrDeadliner)}, nil
 }
 
 func (as *AddrSpec) GetTLSConfig() *tls.Config {
@@ -188,6 +201,18 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 	return errors
 }
 
+func (a *AddrSpec) SanitizedForPublication() *AddrSpec {
+	return &AddrSpec{
+		Addr:       a.Addr,
+		Pass:       SanitizedPass,
+		TLS:        a.TLS,
+		Network:    a.Network,
+		CertFile:   a.CertFile,
+		KeyFile:    a.KeyFile,
+		CACertFile: a.CACertFile,
+	}
+}
+
 ////////////////////////////////////////
 // Config
 
@@ -207,7 +232,9 @@ type ConfigLoader interface {
 func (c *Config) Prepare() ErrorList {
 	errList := ErrorList{}
 
-	errList.Append(c.Admin.Prepare("admin", true))
+	if c.Admin.Addr != "" {
+		errList.Append(c.Admin.Prepare("admin", true))
+	}
 	errList.Append(c.Listen.Prepare("listen", true))
 	errList.Append(c.Uplink.Prepare("uplink", false))
 
@@ -238,6 +265,17 @@ func (c *Config) AsJSON() string {
 	return string(res)
 }
 
+func (c *Config) SanitizedForPublication() *Config {
+	return &Config{
+		Uplink:          *c.Uplink.SanitizedForPublication(),
+		Listen:          *c.Listen.SanitizedForPublication(),
+		ListenRaw:       *c.ListenRaw.SanitizedForPublication(),
+		Admin:           *c.Admin.SanitizedForPublication(),
+		ReadTimeLimitMs: c.ReadTimeLimitMs,
+		LogMessages:     c.LogMessages,
+	}
+}
+
 ////////////////////////////////////////
 // FileConfigLoader
 
@@ -259,6 +297,31 @@ func (f *FileConfigLoader) Load() (*Config, error) {
 }
 
 ////////////////////////////////////////
+// InputConfigLoader
+
+type InputConfigLoader struct {
+	reader io.Reader
+	loaded bool
+}
+
+func NewInputConfigLoader(reader io.Reader) *InputConfigLoader {
+	return &InputConfigLoader{reader: reader, loaded: false}
+}
+
+func (c *InputConfigLoader) Load() (*Config, error) {
+	if c.loaded {
+		return nil, errors.New("Cannot reload config when it's read from input.")
+	}
+	c.loaded = true
+	configJson, err := ioutil.ReadAll(c.reader)
+	if err != nil {
+		return nil, err
+	}
+	var config Config
+	return &config, json.Unmarshal(configJson, &config)
+}
+
+////////////////////////////////////////
 // TestConfigLoader
 
 type TestConfigLoader struct {
@@ -271,7 +334,6 @@ func NewTestConfigLoader(uplinkAddr string) *TestConfigLoader {
 		conf: &Config{
 			Uplink: AddrSpec{Addr: uplinkAddr},
 			Listen: AddrSpec{Addr: "127.0.0.1:0"},
-			Admin:  AddrSpec{Addr: "127.0.0.1:0"},
 		},
 	}
 }

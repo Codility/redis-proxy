@@ -75,7 +75,6 @@ func TestConfigValidation(t *testing.T) {
 	})
 	assertInvalid(&Config{},
 		[]string{
-			"Missing admin address",
 			"Missing listen address",
 			"Missing uplink address",
 		})

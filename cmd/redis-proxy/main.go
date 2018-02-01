@@ -11,12 +11,18 @@ import (
 )
 
 var (
-	config_file = flag.String("f", "config.json", "Config file")
+	config_file = flag.String("f", "config.json", "Config file (or \"-\" for standard input)")
 )
 
 func main() {
 	flag.Parse()
-	proxy, err := rproxy.NewProxy(rproxy.NewFileConfigLoader(*config_file))
+	var configLoader rproxy.ConfigLoader
+	if *config_file == "-" {
+		configLoader = rproxy.NewInputConfigLoader(os.Stdin)
+	} else {
+		configLoader = rproxy.NewFileConfigLoader(*config_file)
+	}
+	proxy, err := rproxy.NewProxy(configLoader)
 	if err != nil {
 		panic(err)
 	}
@@ -25,12 +31,21 @@ func main() {
 }
 
 func watchSignals(proxy *rproxy.Proxy) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP)
+	reload := make(chan os.Signal, 1)
+	signal.Notify(reload, syscall.SIGHUP)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT)
+	signal.Notify(stop, syscall.SIGTERM)
 
 	for {
-		s := <-c
-		log.Printf("Got signal: %v, reloading config\n", s)
-		proxy.Reload()
+		select {
+		case s := <-reload:
+			log.Printf("Got signal: %v, reloading config\n", s)
+			proxy.Reload()
+		case s := <-stop:
+			log.Printf("Got signal: %v, stopping\n", s)
+			proxy.Stop()
+		}
 	}
 }
