@@ -183,7 +183,7 @@ func (as *AddrSpec) Prepare(name string, server bool) ErrorList {
 		} else {
 			if !as.SkipVerify {
 				if as.CACertFile == "" {
-					errors.Add("uplink.tls requires cacertfile")
+					errors.Add("uplink.tls requires cacertfile or skipverify")
 				} else if !pemFileReadable(as.CACertFile) {
 					errors.Add("could not load " + name + ".cacertfile: " + as.CACertFile)
 				}

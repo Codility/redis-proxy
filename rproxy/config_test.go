@@ -144,7 +144,7 @@ func TestConfigValidation(t *testing.T) {
 		"admin.tls requires keyfile",
 		"listen.tls requires certfile",
 		"listen.tls requires keyfile",
-		"uplink.tls requires cacertfile",
+		"uplink.tls requires cacertfile or skipverify",
 	})
 	assertInvalid(&Config{
 		Uplink: AddrSpec{Addr: nonTLSAddr,
