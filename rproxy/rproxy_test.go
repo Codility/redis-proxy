@@ -153,6 +153,41 @@ func TestProxyUplinkTLS(t *testing.T) {
 	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
 }
 
+func TestProxyUplinkSkipVerify(t *testing.T) {
+	srv := fakeredis.Start("fake", "tcp")
+	defer srv.Stop()
+
+	firstProxy := mustStartTestProxy(t, &TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: srv.Addr().String()},
+			Listen: AddrSpec{
+				Addr:     "127.0.0.1:0",
+				TLS:      true,
+				CertFile: "../test_data/tls/server/cert.pem",
+				KeyFile:  "../test_data/tls/server/key.pem",
+			},
+		},
+	})
+	defer firstProxy.Stop()
+
+	laddr := strings.Replace(firstProxy.ListenAddr().String(), "127.0.0.1", "localhost", -1)
+	secondProxy := mustStartTestProxy(t, &TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: laddr,
+				TLS:        true,
+				SkipVerify: true,
+			},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	})
+	defer secondProxy.Stop()
+
+	c := resp.MustDial("tcp", secondProxy.ListenAddr().String(), 0, false)
+	resp, err := c.Call(resp.MsgFromStrings("get", "a"))
+	assert.Nil(t, err)
+	assert.Equal(t, resp.String(), "$4\r\nfake\r\n")
+}
+
 func TestProxyUplinkUnix(t *testing.T) {
 	srv := fakeredis.Start("fake", "unix")
 	defer srv.Stop()
