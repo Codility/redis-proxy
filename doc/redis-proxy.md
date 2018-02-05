@@ -48,7 +48,8 @@ supported in actual configuration):
         "addr": "localhost:6379",   #   forwards requests.
         "pass": "redis-password",   # <- Optional.  Clients must AUTH if set.
         "tls": true,
-        "cacertfile": "cacert.pem"  # <- TLS requires cacertfile.
+        "cacertfile": "cacert.pem", # <- TLS requires cacertfile, unless skipverify is set.
+        "skipverify": false         # <- Optionally disable cert verification.
       },
       "listen": {                   # <- Proxy server.  This is where Proxy
         "addr": "127.0.0.1:7010",   #    clients connect.
