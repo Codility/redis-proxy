@@ -8,6 +8,7 @@ package fakeredis
 //  - its name (as passed to New()) to all other requests
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,7 +24,8 @@ import (
 type FakeRedisServer struct {
 	name string
 
-	listener net.Listener
+	originalListener net.Listener
+	listener         net.Listener
 
 	mu       sync.Mutex
 	shutdown bool
@@ -35,11 +37,19 @@ func New(name string) *FakeRedisServer {
 }
 
 func Start(name, network string) *FakeRedisServer {
+	return start(name, network, false)
+}
+
+func StartTLS(name, network string) *FakeRedisServer {
+	return start(name, network, true)
+}
+
+func start(name, network string, useTLS bool) *FakeRedisServer {
 	startedChan := make(chan struct{})
 
 	srv := New(name)
 
-	go srv.Run(startedChan, network)
+	go srv.Run(startedChan, network, useTLS)
 	<-startedChan
 
 	return srv
@@ -59,12 +69,12 @@ func (s *FakeRedisServer) Requests() []*resp.Msg {
 	return s.requests
 }
 
-func (s *FakeRedisServer) Run(startedChan chan struct{}, network string) {
+func (s *FakeRedisServer) Run(startedChan chan struct{}, network string, useTLS bool) {
 	var err error
 
 	switch network {
 	case "tcp":
-		s.listener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
+		s.originalListener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 
 	case "unix":
 		dir, err := ioutil.TempDir("/tmp", "fakeredis")
@@ -74,7 +84,7 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}, network string) {
 		defer os.RemoveAll(dir)
 
 		name := dir + "/fakeredis.sock"
-		s.listener, err = net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
+		s.originalListener, err = net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
 
 	default:
 		panic("Unknown network: " + network)
@@ -82,6 +92,18 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}, network string) {
 	if err != nil {
 		panic(err)
 	}
+	if useTLS {
+		cer, err := tls.LoadX509KeyPair("../test_data/tls/server/cert.pem", "../test_data/tls/server/key.pem")
+		if err != nil {
+			panic(err)
+		}
+		s.listener = tls.NewListener(s.originalListener, &tls.Config{
+			Certificates: []tls.Certificate{cer},
+		})
+	} else {
+		s.listener = s.originalListener
+	}
+
 	defer s.listener.Close()
 
 	if startedChan != nil {
@@ -91,9 +113,9 @@ func (s *FakeRedisServer) Run(startedChan chan struct{}, network string) {
 	for !s.IsShuttingDown() {
 		switch network {
 		case "tcp":
-			s.listener.(*net.TCPListener).SetDeadline(time.Now().Add(time.Second))
+			s.originalListener.(*net.TCPListener).SetDeadline(time.Now().Add(time.Second))
 		case "unix":
-			s.listener.(*net.UnixListener).SetDeadline(time.Now().Add(time.Second))
+			s.originalListener.(*net.UnixListener).SetDeadline(time.Now().Add(time.Second))
 		}
 
 		conn, err := s.listener.Accept()

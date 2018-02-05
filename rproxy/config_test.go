@@ -43,22 +43,12 @@ func TestConfigValidation(t *testing.T) {
 	// prepare servers to connect to.
 	srv_nonTLS := fakeredis.Start("fake", "tcp")
 	defer srv_nonTLS.Stop()
-	nonTLSAddr := srv_nonTLS.Addr().String()
 
-	proxy_TLS := mustStartTestProxy(t, &TestConfigLoader{
-		conf: &Config{
-			Uplink: AddrSpec{Addr: srv_nonTLS.Addr().String()},
-			Listen: AddrSpec{
-				Addr:     "127.0.0.1:0",
-				TLS:      true,
-				CertFile: "../test_data/tls/server/cert.pem",
-				KeyFile:  "../test_data/tls/server/key.pem",
-			},
-			Admin: AddrSpec{Addr: "127.0.0.1:0"},
-		},
-	})
-	defer proxy_TLS.Stop()
-	TLSAddr := strings.Replace(proxy_TLS.ListenAddr().String(), "127.0.0.1", "localhost", -1)
+	srv_TLS := fakeredis.StartTLS("fake", "tcp")
+	defer srv_TLS.Stop()
+
+	nonTLSAddr := srv_nonTLS.Addr().String()
+	TLSAddr := strings.Replace(srv_TLS.Addr().String(), "127.0.0.1", "localhost", -1)
 
 	// non-TLS configurations
 
