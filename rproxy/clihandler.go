@@ -18,7 +18,7 @@ type ClientHandler struct {
 	uplinkConn       *resp.Conn
 }
 
-func NewCliHandler(cliConn *resp.Conn, proxy *Proxy) *ClientHandler {
+func NewClientHandler(cliConn *resp.Conn, proxy *Proxy) *ClientHandler {
 	return &ClientHandler{cliConn: cliConn, proxy: proxy}
 }
 
