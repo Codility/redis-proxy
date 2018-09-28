@@ -175,6 +175,7 @@ func (ch *ClientHandler) handleRequest(req *resp.Msg) {
 	})
 	if err != nil {
 		log.Printf("Error: %v\n", err)
+		ch.done = true
 		return
 	}
 	ch.postprocessRequest(req, res)
