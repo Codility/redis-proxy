@@ -7,7 +7,7 @@ import (
 	"github.com/Codility/redis-proxy/resp"
 )
 
-type CliHandler struct {
+type ClientHandler struct {
 	proxy   *Proxy
 	cliConn *resp.Conn
 
@@ -18,11 +18,11 @@ type CliHandler struct {
 	uplinkConn       *resp.Conn
 }
 
-func NewCliHandler(cliConn *resp.Conn, proxy *Proxy) *CliHandler {
-	return &CliHandler{cliConn: cliConn, proxy: proxy}
+func NewCliHandler(cliConn *resp.Conn, proxy *Proxy) *ClientHandler {
+	return &ClientHandler{cliConn: cliConn, proxy: proxy}
 }
 
-func (ch *CliHandler) Run() {
+func (ch *ClientHandler) Run() {
 	log.Printf("Handling new client: connection from %s", ch.cliConn.RemoteAddr())
 
 	defer func() {
@@ -41,7 +41,7 @@ func (ch *CliHandler) Run() {
 	}
 }
 
-func (ch *CliHandler) dialUplink(config *Config) error {
+func (ch *ClientHandler) dialUplink(config *Config) error {
 	if ch.uplinkConn != nil {
 		ch.uplinkConn.Close()
 		ch.uplinkConn = nil
@@ -58,7 +58,7 @@ func (ch *CliHandler) dialUplink(config *Config) error {
 	return nil
 }
 
-func (ch *CliHandler) readMsgFromClient() *resp.Msg {
+func (ch *ClientHandler) readMsgFromClient() *resp.Msg {
 	req, err := ch.cliConn.ReadMsg()
 	if err != nil {
 		ch.done = true
@@ -70,7 +70,7 @@ func (ch *CliHandler) readMsgFromClient() *resp.Msg {
 	return req
 }
 
-func (ch *CliHandler) writeToClient(data []byte) bool {
+func (ch *ClientHandler) writeToClient(data []byte) bool {
 	_, err := ch.cliConn.Write(data)
 	if err != nil {
 		log.Printf("Could not write to %s: %v\n",
@@ -82,7 +82,7 @@ func (ch *CliHandler) writeToClient(data []byte) bool {
 	return true
 }
 
-func (ch *CliHandler) preprocessRequest(req *resp.Msg) bool {
+func (ch *ClientHandler) preprocessRequest(req *resp.Msg) bool {
 	if req.Op() == resp.MsgOpBroken {
 		ch.writeToClient(resp.MsgParseError)
 		ch.done = true
@@ -111,7 +111,7 @@ func (ch *CliHandler) preprocessRequest(req *resp.Msg) bool {
 	return true
 }
 
-func (ch *CliHandler) postprocessRequest(req, res *resp.Msg) {
+func (ch *ClientHandler) postprocessRequest(req, res *resp.Msg) {
 	if (req.Op() == resp.MsgOpSelect) && res.IsOk() {
 		ch.db = req.FirstArgInt()
 	}
@@ -123,7 +123,7 @@ func callAndMeasure(callable func() error) (time.Duration, error) {
 	return time.Since(startTs), err
 }
 
-func (ch *CliHandler) handleRequest(req *resp.Msg) {
+func (ch *ClientHandler) handleRequest(req *resp.Msg) {
 	startTs := time.Now()
 	redisCallDuration := time.Duration(0)
 	defer func() {
