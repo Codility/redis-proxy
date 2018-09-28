@@ -95,7 +95,10 @@ func (rc *Conn) ReadMsg() (*Msg, error) {
 			rc.logMessage(true, res)
 		}
 	}
-	return &Msg{data: res}, err
+	if err != nil {
+		return nil, err
+	}
+	return &Msg{data: res}, nil
 }
 
 func (rc *Conn) MustReadMsg() *Msg {
