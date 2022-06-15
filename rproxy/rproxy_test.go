@@ -515,3 +515,27 @@ func TestProxyPauseDuringActiveRequests(t *testing.T) {
 	assert.Equal(t, proxy.GetInfo().WaitingRequests, 0)
 	waitUntil(t, func() bool { return reqStartedDuringPauseWorking })
 }
+
+func TestProxyCloseClientOnEOF(t *testing.T) {
+	redis := mustStartRedisServer(
+		BaseTestRedisPort,
+		"--requirepass", "test-pass")
+	defer redis.Process.Kill()
+
+	redisURL := fmt.Sprintf("localhost:%d", BaseTestRedisPort)
+	conf := &TestConfigLoader{
+		conf: &Config{
+			Uplink: AddrSpec{Addr: redisURL, Pass: "test-pass"},
+			Listen: AddrSpec{Addr: "127.0.0.1:0"},
+		},
+	}
+	proxy := mustStartTestProxy(t, conf)
+	defer proxy.Stop()
+
+	conn := resp.MustDial("tcp", proxy.ListenAddr().String(), 0, false)
+	assert.Equal(t, conn.MustCall(resp.MsgFromStrings("get", "a")).String(), "$-1\r\n")
+	redis.Process.Kill()
+	response, err := conn.Call(resp.MsgFromStrings("get", "a"))
+	assert.NotNil(t, err)
+	assert.Nil(t, response)
+}

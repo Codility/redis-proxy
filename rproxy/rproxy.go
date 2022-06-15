@@ -224,7 +224,7 @@ func (proxy *Proxy) listenForClients() {
 			log.Printf("Managed Proxy: Got an error accepting a connection: %s", err)
 		} else {
 			rc := resp.NewConn(conn, 0, proxy.config.LogMessages)
-			go NewCliHandler(rc, proxy).Run()
+			go NewClientHandler(rc, proxy).Run()
 		}
 	}
 }
